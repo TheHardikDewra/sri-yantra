@@ -205,6 +205,9 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
         z.append(want if not z else max(want, z[-1] + MIN_RISE))
     z.append(z[-1] + bindu_h)
 
+    build_mesh.last_angles = angles
+    build_mesh.last_tiers = ts
+
     V, F = [], []
     m = len(angles)
 
@@ -436,6 +439,29 @@ if __name__ == "__main__":
     bad, unp = check_watertight(V, F)
     print(f"watertight: {bad} mis-wound edges, {unp} unpaired edges "
           f"-> {'PASS' if bad == 0 and unp == 0 else 'FAIL'}")
+
+    # The web page needs to know the height of the mountain under any point,
+    # to run water down it and settle flowers on it. Raycasting a 59,200-facet
+    # mesh in the browser is hopeless, and it is unnecessary: the staircase is
+    # exactly these outlines at exactly these heights. Ship the profile.
+    # Downsampled: the mesh carries thousands of rays so its ridges stay
+    # sharp, but a height lookup only needs enough angles that a drop never
+    # visibly steps sideways. 720 is a quarter of a degree.
+    src_a = build_mesh.last_angles
+    step = max(1, len(src_a) // 720)
+    keep = list(range(0, len(src_a), step))
+    profile = {
+        "note": ("height of the solid at (r, theta): the top of the innermost "
+                 "tier whose radius still reaches r; 0 outside the base"),
+        "angles": [round(src_a[i], 5) for i in keep],
+        "tiers": [{"name": nm, "z": round(zz, 5),
+                   "r": [round(rs[i], 5) for i in keep]}
+                  for (nm, rs), zz in zip(build_mesh.last_tiers, z)],
+    }
+    with open(os.path.join(OUT, "meru-profile.json"), "w") as fh:
+        json.dump(profile, fh, separators=(",", ":"))
+    print(f"wrote meru-profile.json  "
+          f"{os.path.getsize(os.path.join(OUT, 'meru-profile.json'))/1e3:.0f} kB")
 
     write_glb(os.path.join(OUT, "maha-meru.glb"), V, F)
     write_stl(os.path.join(OUT, "maha-meru.stl"), V, F)

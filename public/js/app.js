@@ -191,6 +191,9 @@ async function startMeru() {
 
 async function startPuja() {
   const { createPuja, UPACHARAS } = await import('./puja.js');
+  // the exact staircase profile, so offerings can sit on and run down it
+  meru.profile = await fetch('./data/meru-profile.json')
+    .then(r => r.json()).catch(() => null);
   const puja = createPuja(meru);
   meru.puja = puja;                       // the render loop drives it
 

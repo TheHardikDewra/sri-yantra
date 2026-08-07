@@ -120,36 +120,25 @@ export function createPuja(meru) {
   const live = [];
   const st = { step: -1, playing: false, t: 0, hold: 3.4 };
 
-  const ray = new THREE.Raycaster();
-  const DOWN = new THREE.Vector3(0, -1, 0);
-  function cast(x, z) {
-    ray.set(new THREE.Vector3(x, H * 2.2, z), DOWN);
-    const hit = ray.intersectObject(meru.mesh, false)[0];
-    return hit ? hit.point.y : 0;
-  }
-
-  // Water has to run down the terraces, which means asking the height of the
-  // mountain under every drop on every frame. Raycasting 59,200 facets a few
-  // hundred times a frame is not on, so the surface is sampled once into a
-  // polar table and read from that. Nearest-sample is right here rather than
-  // smoothed: the Meru is a staircase, and the steps should stay steps.
-  const NA = 128, NR = 90, RMAX = R * 1.3;
-  const field = new Float32Array(NA * NR);
-  for (let ai = 0; ai < NA; ai++) {
-    const a = (ai / NA) * Math.PI * 2;
-    for (let ri = 0; ri < NR; ri++) {
-      const r = (ri / (NR - 1)) * RMAX;
-      field[ai * NR + ri] = cast(Math.cos(a) * r, Math.sin(a) * r);
-    }
-  }
+  // How high is the mountain under (x, z)? The solver already knows exactly -
+  // the solid is these outlines at these heights - so it ships the profile and
+  // this reads it. Raycasting a 59,200-facet mesh a few hundred times a frame
+  // would freeze the tab, and it would only be rediscovering this.
+  //
+  // Nearest angle rather than interpolated: the Meru is a staircase, and the
+  // steps should stay steps.
+  const prof = meru.profile;
+  const NA = prof ? prof.angles.length : 0;
   function ground(x, z) {
+    if (!prof) return 0;
     const r = Math.hypot(x, z);
-    if (r > RMAX) return 0;
     let a = Math.atan2(z, x);
     if (a < 0) a += Math.PI * 2;
     const ai = Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
-    const ri = Math.min(NR - 1, Math.round(r / RMAX * (NR - 1)));
-    return field[ai * NR + ri];
+    for (let i = prof.tiers.length - 1; i >= 0; i--) {
+      if (r <= prof.tiers[i].r[ai]) return prof.tiers[i].z;
+    }
+    return 0;
   }
 
   const geo = { blossom: blossomGeometry(), petal: petalGeometry(0.22), drop: dropGeometry() };
