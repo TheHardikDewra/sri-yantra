@@ -1,9 +1,15 @@
 // Shodashopachara: the sixteen services, offered to the Meru.
 //
-// Each upachara gets one clear act in three dimensions - water poured, a lamp
-// carried round, petals let fall - built from ordinary geometry and a couple of
-// lights. Nothing here is a glow or a gradient; the flame is an actual light
-// with an actual falloff, which is a different thing.
+// The offerings are modelled, not suggested. Puspa is blossoms - five petals
+// round a centre, built from a bezier petal outline - and loose petals, which
+// tumble as they fall and come to rest on whichever terrace is actually
+// beneath them, found by casting a ray down onto the mesh. Water is elongated
+// drops that stretch as they gather speed and throw a ring when they land.
+// Dipa is a dish with a flame in it and the key light drops away so the flame
+// is what is lighting the mountain.
+//
+// Each service also gets its own viewpoint, because half of what makes an
+// offering legible is where you are standing when it is made.
 //
 // Deliberately absent: any mantra. The names of the services and what is done
 // at each are open knowledge and are given in full. The syllables that go with
@@ -11,6 +17,7 @@
 // sequence is written so nothing depends on them.
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const UPACHARAS = [
   { n: 'Āvāhana', e: 'invocation — the deity is invited to be present' },
@@ -21,7 +28,7 @@ export const UPACHARAS = [
   { n: 'Snāna', e: 'the bath — poured over and let run down' },
   { n: 'Vastra', e: 'cloth, wrapped about the form' },
   { n: 'Yajñopavīta', e: 'the sacred thread, laid across the shoulder' },
-  { n: 'Gandha', e: 'sandal paste, smoothed onto the surface' },
+  { n: 'Gandha', e: 'sandal paste, marked onto the tiers' },
   { n: 'Puṣpa', e: 'flowers, let fall over the enclosures' },
   { n: 'Dhūpa', e: 'incense, its smoke drawn upward' },
   { n: 'Dīpa', e: 'the lamp, carried round the form' },
@@ -31,307 +38,473 @@ export const UPACHARAS = [
   { n: 'Namaskāra', e: 'prostration, and the offering is complete' },
 ];
 
+// marigold, hibiscus, jasmine, champaka - what actually gets offered
+const BLOOM = [0xf07f1a, 0xd8321f, 0xf6efdc, 0xf2c53d, 0xe45c2a];
 const C = {
-  water:  0xbfd8e8,
-  cloth:  0xb03a2e,
-  thread: 0xf2e8d0,
-  sandal: 0xd8cbb0,
-  petal:  [0xe05a3a, 0xe89a3c, 0xf0c04a, 0xdd7a55, 0xc8455f],
-  smoke:  0xb9b2a6,
-  flame:  0xffb445,
-  food:   0xe0b356,
+  water: 0xa9cde4, cloth: 0xa8231b, thread: 0xf4ecd8,
+  sandal: 0xe8dcc0, smoke: 0xc4bcae, flame: 0xffbe4d,
+  ghee: 0xf3d78a, brass: 0xb98d3c, leaf: 0x3f7a34, food: 0xe8c46a,
 };
 
-const easeOut = t => 1 - Math.pow(1 - t, 3);
+const ease = t => 1 - Math.pow(1 - t, 3);
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+// ---------------------------------------------------------------- geometry
+
+// One petal, base at the origin, tip at +Y, slightly cupped along Z.
+function petalGeometry(cup = 0.16) {
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0);
+  sh.bezierCurveTo(0.30, 0.10, 0.40, 0.60, 0.045, 1);
+  sh.bezierCurveTo(-0.045, 1, -0.40, 0.60, -0.30, 0.10);
+  sh.bezierCurveTo(-0.22, 0.05, -0.10, 0.02, 0, 0);
+  const g = new THREE.ShapeGeometry(sh, 12);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    p.setZ(i, cup * y * y);          // curl the tip up out of the plane
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// A blossom: petals round a disc, which is what a flower looks like.
+function blossomGeometry(petals = 5) {
+  const parts = [];
+  const petal = petalGeometry(0.20);
+  for (let k = 0; k < petals; k++) {
+    const g = petal.clone();
+    g.rotateX(-0.42);                       // lift the petals out of the plane
+    g.translate(0, 0.16, 0);
+    g.rotateZ((k / petals) * Math.PI * 2);
+    parts.push(g);
+  }
+  const eye = new THREE.SphereGeometry(0.17, 10, 8);
+  eye.scale(1, 1, 0.6);
+  eye.rotateX(Math.PI / 2);
+  parts.push(eye);
+  const g = mergeGeometries(parts, false);
+  g.rotateX(-Math.PI / 2);                  // lie face up
+  g.computeVertexNormals();
+  parts.forEach(x => x.dispose());
+  petal.dispose();
+  return g;
+}
+
+// A drop: a sphere pulled out along Y, so it can be stretched as it falls.
+function dropGeometry() {
+  const g = new THREE.SphereGeometry(0.5, 8, 6);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const y = p.getY(i);
+    const k = (y + 0.5);
+    p.setX(i, p.getX(i) * (0.45 + 0.55 * k));
+    p.setZ(i, p.getZ(i) * (0.45 + 0.55 * k));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+// ------------------------------------------------------------------- puja
 
 export function createPuja(meru) {
   const scene = meru.scene;
   const group = new THREE.Group();
   scene.add(group);
 
-  // model extent, so every offering scales to the mountain rather than to
-  // numbers baked in here
   const bb = meru.mesh.geometry.boundingBox;
   const R = Math.max(bb.max.x, bb.max.z);
   const H = bb.max.y;
 
-  const live = [];              // { obj, tick(dt, age), life }
-  const state = { step: -1, playing: false, t: 0, hold: 3.2 };
+  const HOME = meru.homeSpherical();
+  const live = [];
+  const st = { step: -1, playing: false, t: 0, hold: 3.4 };
 
-  const add = (obj, tick, life = Infinity) => {
+  const ray = new THREE.Raycaster();
+  const DOWN = new THREE.Vector3(0, -1, 0);
+  // Where does something dropped at (x, z) actually land? Ask the mesh.
+  function ground(x, z) {
+    ray.set(new THREE.Vector3(x, H * 2.2, z), DOWN);
+    const hit = ray.intersectObject(meru.mesh, false)[0];
+    return hit ? hit.point.y : 0;
+  }
+
+  const geo = { blossom: blossomGeometry(), petal: petalGeometry(0.22), drop: dropGeometry() };
+
+  const add = (obj, tick) => {
     group.add(obj);
-    const rec = { obj, tick, life, age: 0 };
-    live.push(rec);
-    return rec;
+    live.push({ obj, tick, age: 0 });
+    return obj;
   };
 
   function clear() {
     for (const r of live) {
       group.remove(r.obj);
       r.obj.traverse?.(o => {
-        o.geometry?.dispose();
+        if (o.geometry && !Object.values(geo).includes(o.geometry)) o.geometry.dispose();
         if (o.material) [].concat(o.material).forEach(m => m.dispose());
       });
     }
     live.length = 0;
-    if (meru.mesh) meru.setMaterial(meru.material);   // undo any tinting
+    meru.setKeyLight?.(1);
+    if (meru.mesh) meru.setMaterial(meru.material);
   }
 
-  // ---- small makers -------------------------------------------------------
+  const matt = (color, opacity = 1, rough = 0.72) =>
+    new THREE.MeshStandardMaterial({
+      color, roughness: rough, metalness: 0.05,
+      transparent: opacity < 1, opacity, side: THREE.DoubleSide,
+    });
 
-  const flat = (color, opacity = 1) => new THREE.MeshStandardMaterial({
-    color, roughness: 0.7, metalness: 0.0,
-    transparent: opacity < 1, opacity,
-  });
-
-  function ring(radius, y, color, tube = R * 0.012) {
-    const m = new THREE.Mesh(
-      new THREE.TorusGeometry(radius, tube, 8, 128), flat(color));
-    m.rotation.x = Math.PI / 2;
-    m.position.y = y;
-    return m;
-  }
-
-  // A shower of small things: petals, droplets, smoke puffs. `spawn` places one
-  // and `step` moves it. Instanced so a few hundred cost nothing.
-  function shower(count, colors, size, spawn, step) {
-    const geo = new THREE.PlaneGeometry(size, size);
-    const mats = colors.map(c => flat(c, 0.95));
-    const meshes = mats.map(m => new THREE.InstancedMesh(geo, m,
-      Math.ceil(count / mats.length)));
+  // A pile of one geometry, moved by `step`. Instanced, so hundreds are free.
+  function swarm(g, colors, count, spawn, step) {
+    const per = Math.ceil(count / colors.length);
+    const meshes = colors.map(c => {
+      const m = new THREE.InstancedMesh(g, matt(c), per);
+      m.frustumCulled = false;
+      return m;
+    });
     const holder = new THREE.Group();
     meshes.forEach(m => holder.add(m));
     const bits = [];
     for (let i = 0; i < count; i++) {
-      bits.push(Object.assign({ mesh: i % mats.length, idx: (i / mats.length) | 0 },
-        spawn(i, count)));
+      bits.push(Object.assign(
+        { m: i % colors.length, k: (i / colors.length) | 0 }, spawn(i, count)));
     }
-    const dummy = new THREE.Object3D();
+    const d = new THREE.Object3D();
     return {
       holder,
-      tick(dt) {
+      tick(dt, age) {
         for (const b of bits) {
-          step(b, dt);
-          dummy.position.set(b.x, b.y, b.z);
-          dummy.rotation.set(b.rx || 0, b.ry || 0, b.rz || 0);
-          dummy.scale.setScalar(b.s === undefined ? 1 : b.s);
-          dummy.updateMatrix();
-          meshes[b.mesh].setMatrixAt(b.idx, dummy.matrix);
+          step(b, dt, age);
+          d.position.set(b.x, b.y, b.z);
+          d.rotation.set(b.rx || 0, b.ry || 0, b.rz || 0);
+          d.scale.set(b.sx ?? b.s ?? 1, b.sy ?? b.s ?? 1, b.sz ?? b.s ?? 1);
+          d.updateMatrix();
+          meshes[b.m].setMatrixAt(b.k, d.matrix);
         }
         meshes.forEach(m => { m.instanceMatrix.needsUpdate = true; });
       },
     };
   }
 
-  // Water poured from a height and running down the terraces. Spawn heights
-  // are kept close to the summit: the camera frames the mountain tightly, so
-  // anything released far above it does its falling off-screen.
-  function pour(fromY, count = 260) {
-    const s = shower(count, [C.water], R * 0.028,
-      i => ({
-        a: Math.random() * Math.PI * 2,
-        r: Math.random() * R * 0.06,
-        y: fromY + Math.random() * H * 0.14,
-        v: 0, x: 0, z: 0, s: 0.6 + Math.random() * 0.6,
-      }),
+  // Water: drops stretch as they gather speed, then land and spread.
+  function water(fromY, count, spread = 0.10) {
+    const s = swarm(geo.drop, [C.water], count,
+      () => {
+        const a = rnd(0, Math.PI * 2), r = rnd(0, R * spread);
+        return { a, r, x: Math.cos(a) * r, z: Math.sin(a) * r,
+                 y: fromY + rnd(0, H * 0.10), v: rnd(0, 0.3),
+                 sx: R * 0.016, sy: R * 0.03, sz: R * 0.016, land: 0 };
+      },
       (b, dt) => {
-        b.v += dt * 2.2;
-        b.y -= b.v * dt;
-        // once it lands it spreads outward across the tiers
-        if (b.y <= 0.02) { b.y = 0.02; b.r += dt * R * 0.9; }
-        if (b.r > R * 1.05 || b.y < -0.1) {
-          b.y = fromY + Math.random() * H * 0.14;
-          b.r = Math.random() * R * 0.06; b.v = 0;
+        if (b.land) {
+          b.land -= dt;
+          b.r += dt * R * 0.55;
+          b.sy = Math.max(R * 0.004, b.sy * (1 - dt * 3));
+          if (b.land <= 0) {
+            b.y = fromY + rnd(0, H * 0.10);
+            b.r = rnd(0, R * spread); b.v = 0;
+            b.sy = R * 0.03; b.land = 0;
+          }
+        } else {
+          b.v += dt * 2.6;
+          b.y -= b.v * dt;
+          b.sy = R * 0.03 * (1 + b.v * 0.9);      // stretch with speed
+          const g = ground(b.x, b.z);
+          if (b.y <= g + R * 0.01) { b.y = g + R * 0.01; b.land = 0.5; }
         }
         b.x = Math.cos(b.a) * b.r;
         b.z = Math.sin(b.a) * b.r;
-        b.rx = -Math.PI / 2;
       });
     return s;
   }
 
-  // ---- the sixteen --------------------------------------------------------
+  function ring(radius, y, color, tube, seg = 128) {
+    const m = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 8, seg),
+      matt(color, 1, 0.5));
+    m.rotation.x = Math.PI / 2;
+    m.position.y = y;
+    return m;
+  }
+
+  // ---- the sixteen ------------------------------------------------------
 
   const acts = [
-    // 1 Avahana - the form is approached squarely and the bindu answers
-    () => {
-      meru.view('front');
-      const halo = ring(R * 0.16, H + R * 0.02, C.flame, R * 0.006);
-      add(halo, (dt, age) => {
-        const k = Math.min(1, age / 1.6);
-        halo.scale.setScalar(1 + easeOut(k) * 5);
-        halo.material.opacity = 1 - k;
-        halo.material.transparent = true;
-      });
-    },
-    // 2 Asana - a seat set beneath
-    () => {
-      const seat = ring(R * 1.12, 0.012, C.petal[1], R * 0.03);
-      seat.scale.setScalar(0.01);
-      add(seat, (dt, age) => seat.scale.setScalar(easeOut(Math.min(1, age / 0.8))));
-    },
-    // 3 Padya - water at the feet
-    () => {
-      const w = ring(R * 0.98, 0.02, C.water, R * 0.016);
-      add(w, (dt, age) => { w.rotation.z += dt * 0.6; });
-      const s = pour(H * 0.12, 90);
-      add(s.holder, dt => s.tick(dt));
-    },
-    // 4 Arghya - water to the hands, offered higher up
-    () => {
-      const s = pour(H * 0.55, 120);
-      add(s.holder, dt => s.tick(dt));
-    },
-    // 5 Acamaniya - a sip, at the summit
-    () => {
-      const s = pour(H * 0.98, 60);
-      add(s.holder, dt => s.tick(dt));
-    },
-    // 6 Snana - the bath, poured over the whole form
-    () => {
-      const s = pour(H * 1.05, 320);
-      add(s.holder, dt => s.tick(dt));
-      const sheet = ring(R * 1.02, 0.03, C.water, R * 0.022);
-      add(sheet, (dt, age) => { sheet.material.opacity = 0.55; sheet.material.transparent = true; });
-    },
-    // 7 Vastra - cloth wound about the tiers
-    () => {
+    { view: [0, HOME.phi, 1.0], hold: 3.0, run() {          // 1 Avahana
+      const pt = new THREE.PointLight(C.flame, 0, R * 4, 2);
+      pt.position.set(0, H * 1.02, 0);
+      add(pt, (dt, age) => { pt.intensity = 14 * Math.min(1, age / 0.9); });
       for (let k = 0; k < 3; k++) {
-        const y = H * (0.16 + k * 0.13);
-        const r = R * (0.86 - k * 0.16);
-        const band = ring(r, y, C.cloth, R * 0.028);
-        band.scale.set(0.01, 0.01, 1);
-        add(band, (dt, age) => {
-          const t = easeOut(Math.min(1, Math.max(0, age - k * 0.18) / 0.7));
-          band.scale.set(t, t, 1);
+        const w = ring(R * 0.10, H * 1.0, C.flame, R * 0.004);
+        add(w, (dt, age) => {
+          const t = Math.max(0, age - k * 0.45) % 2.4 / 2.4;
+          w.scale.setScalar(1 + ease(t) * 9);
+          w.material.opacity = 1 - t;
+          w.material.transparent = true;
         });
       }
-    },
-    // 8 Yajnopavita - the thread, over one shoulder and under the other arm
-    () => {
+    } },
+
+    { view: [0, 1.30, 1.05], hold: 2.8, run() {             // 2 Asana
+      const n = 16, r0 = R * 1.02, r1 = R * 1.30;
+      const s = swarm(geo.petal, [BLOOM[0], BLOOM[3]], n,
+        i => {
+          const a = (i / n) * Math.PI * 2;
+          return { a, x: Math.cos(a) * (r0 + r1) / 2, z: Math.sin(a) * (r0 + r1) / 2,
+                   y: 0.02, rx: -Math.PI / 2, ry: 0, rz: -a + Math.PI / 2,
+                   s: 0.001, grow: (r1 - r0) };
+        },
+        (b, dt, age) => { b.s = ease(Math.min(1, age / 0.9)) * b.grow; });
+      add(s.holder, (dt, age) => s.tick(dt, age));
+    } },
+
+    { view: [0, 1.42, 0.85], hold: 3.2, run() {             // 3 Padya
+      const w = water(H * 0.20, 110, 0.20);
+      add(w.holder, dt => w.tick(dt));
+      const pool = ring(R * 1.00, 0.015, C.water, R * 0.012);
+      pool.material.opacity = 0.75; pool.material.transparent = true;
+      add(pool, (dt, age) => pool.scale.setScalar(0.4 + 0.6 * ease(Math.min(1, age / 1.2))));
+    } },
+
+    { view: [0.5, 1.15, 0.95], hold: 3.2, run() {           // 4 Arghya
+      const w = water(H * 0.72, 130, 0.12);
+      add(w.holder, dt => w.tick(dt));
+    } },
+
+    { view: [0, 0.95, 0.72], hold: 3.2, run() {             // 5 Acamaniya
+      const w = water(H * 1.02, 70, 0.05);
+      add(w.holder, dt => w.tick(dt));
+    } },
+
+    { view: [0, HOME.phi, 1.08], hold: 4.2, run() {         // 6 Snana
+      const w = water(H * 1.06, 340, 0.09);
+      add(w.holder, dt => w.tick(dt));
+      for (let k = 0; k < 4; k++) {
+        const y = H * (0.86 - k * 0.22);
+        const sheet = ring(R * (0.30 + k * 0.22), y, C.water, R * 0.010);
+        sheet.material.opacity = 0.5; sheet.material.transparent = true;
+        add(sheet, (dt, age) => {
+          const t = Math.min(1, Math.max(0, age - k * 0.35) / 0.8);
+          sheet.scale.setScalar(0.2 + 0.8 * ease(t));
+        });
+      }
+    } },
+
+    { view: [0.7, 1.20, 0.95], hold: 3.4, run() {           // 7 Vastra
+      // a band that follows the silhouette, wound round and up
       const pts = [];
-      for (let i = 0; i <= 160; i++) {
-        const t = i / 160, a = t * Math.PI * 2;
+      const turns = 2.4;
+      for (let i = 0; i <= 240; i++) {
+        const t = i / 240;
+        const a = t * Math.PI * 2 * turns;
+        const y = H * (0.08 + t * 0.52);
+        const rad = R * (0.94 - t * 0.55);
+        pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
+      }
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const cloth = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, 260, R * 0.045, 4, false),
+        matt(C.cloth, 1, 0.85));
+      cloth.scale.set(1, 1, 1);
+      add(cloth, (dt, age) => {
+        const t = Math.min(1, age / 1.6);
+        cloth.geometry.setDrawRange(0, Math.floor(cloth.geometry.index.count * ease(t)));
+      });
+    } },
+
+    { view: [0.9, 1.15, 0.95], hold: 3.0, run() {           // 8 Yajnopavita
+      const pts = [];
+      for (let i = 0; i <= 200; i++) {
+        const t = i / 200, a = t * Math.PI * 2;
         pts.push(new THREE.Vector3(
-          Math.cos(a) * R * 0.72,
-          H * (0.86 - 0.66 * Math.abs(Math.sin(a / 2))),
-          Math.sin(a) * R * 0.72 * 0.55));
+          Math.cos(a) * R * 0.70,
+          H * (0.90 - 0.72 * Math.abs(Math.sin(a / 2))),
+          Math.sin(a) * R * 0.42));
       }
       const thread = new THREE.Mesh(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true),
-          200, R * 0.008, 6, true), flat(C.thread));
-      thread.rotation.y = -0.5;
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 240,
+          R * 0.007, 5, true), matt(C.thread, 1, 0.9));
+      thread.rotation.y = -0.6;
       add(thread, (dt, age) => {
-        thread.visible = age > 0.15;
+        thread.geometry.setDrawRange(0,
+          Math.floor(thread.geometry.index.count * ease(Math.min(1, age / 1.3))));
       });
-    },
-    // 9 Gandha - sandal paste, taken onto the surface itself
-    () => {
-      const m = meru.mesh.material;
-      const from = m.color.clone(), to = new THREE.Color(C.sandal);
-      add(new THREE.Object3D(), (dt, age) => {
-        m.color.copy(from).lerp(to, Math.min(1, age / 1.2) * 0.75);
-      });
-    },
-    // 10 Pushpa - flowers let fall
-    () => {
-      const s = shower(420, C.petal, R * 0.05,
+    } },
+
+    { view: [0.4, 1.25, 0.90], hold: 3.0, run() {           // 9 Gandha
+      // marks smoothed onto each tier, not a wash over the whole thing
+      const n = 24;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        const t = k / n;
+        const rad = R * (0.30 + 0.62 * ((k * 7) % n) / n);
+        const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
+        const mark = new THREE.Mesh(
+          new THREE.CircleGeometry(R * 0.035, 16), matt(C.sandal, 1, 0.95));
+        mark.rotation.x = -Math.PI / 2;
+        mark.position.set(x, ground(x, z) + R * 0.004, z);
+        mark.scale.setScalar(0.01);
+        add(mark, (dt, age) =>
+          mark.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.045) / 0.4))));
+      }
+    } },
+
+    { view: [0, 0.62, 1.12], hold: 5.0, run() {             // 10 Puspa
+      // whole blossoms, and loose petals, settling where the mesh actually is
+      const blooms = swarm(geo.blossom, BLOOM, 130,
         () => {
-          const a = Math.random() * Math.PI * 2;
-          const r = Math.sqrt(Math.random()) * R * 1.15;
-          return { a, r, x: Math.cos(a) * r, z: Math.sin(a) * r,
-                   y: H * (1.0 + Math.random() * 0.45), v: 0,
-                   rx: Math.random() * 3, ry: Math.random() * 3, rz: Math.random() * 3,
-                   spin: (Math.random() - 0.5) * 2, rest: Math.random() * H * 0.55 };
+          const a = rnd(0, Math.PI * 2), r = Math.sqrt(Math.random()) * R * 1.10;
+          const x = Math.cos(a) * r, z = Math.sin(a) * r;
+          return { x, z, y: H * rnd(1.05, 1.85), v: rnd(0, 0.4),
+                   rx: rnd(0, 6), ry: rnd(0, 6), rz: rnd(0, 6),
+                   spin: rnd(-2.2, 2.2), rest: ground(x, z) + R * 0.012,
+                   s: R * rnd(0.045, 0.085), down: false };
         },
         (b, dt) => {
-          if (b.y > b.rest) {
-            b.v += dt * 1.1; b.y -= b.v * dt;
-            b.rx += b.spin * dt; b.rz += b.spin * dt * 0.6;
+          if (b.down) return;
+          b.v += dt * 1.5; b.y -= b.v * dt;
+          b.rx += b.spin * dt; b.rz += b.spin * 0.7 * dt;
+          if (b.y <= b.rest) {                    // land flat and stay
+            b.y = b.rest; b.down = true;
+            b.rx = 0; b.rz = 0; b.ry = rnd(0, 6);
           }
         });
-      add(s.holder, dt => s.tick(dt));
-    },
-    // 11 Dhupa - incense, drawn upward
-    () => {
-      const s = shower(200, [C.smoke], R * 0.09,
-        () => ({ a: Math.random() * Math.PI * 2, r: R * (0.2 + Math.random() * 0.7),
-                 y: Math.random() * H, x: 0, z: 0, s: 0.4 + Math.random() }),
+      add(blooms.holder, dt => blooms.tick(dt));
+
+      const petals = swarm(geo.petal, BLOOM, 150,
+        () => {
+          const a = rnd(0, Math.PI * 2), r = Math.sqrt(Math.random()) * R * 1.15;
+          const x = Math.cos(a) * r, z = Math.sin(a) * r;
+          return { x, z, y: H * rnd(1.0, 2.0), v: rnd(0, 0.5),
+                   rx: rnd(0, 6), ry: rnd(0, 6), rz: rnd(0, 6),
+                   spin: rnd(-3, 3), rest: ground(x, z) + R * 0.006,
+                   s: R * rnd(0.05, 0.09), down: false };
+        },
         (b, dt) => {
-          b.y += dt * H * 0.28;
-          b.a += dt * 0.5;
-          b.r *= 1 - dt * 0.06;
-          b.s *= 1 - dt * 0.12;
-          if (b.y > H * 1.5 || b.s < 0.05) {
-            b.y = 0.05; b.r = R * (0.2 + Math.random() * 0.7);
-            b.s = 0.4 + Math.random();
+          if (b.down) return;
+          b.v += dt * 1.2; b.y -= b.v * dt;
+          b.rx += b.spin * dt; b.ry += b.spin * 0.5 * dt;
+          if (b.y <= b.rest) {
+            b.y = b.rest; b.down = true; b.rx = -Math.PI / 2; b.rz = rnd(0, 6);
           }
-          b.x = Math.cos(b.a) * b.r; b.z = Math.sin(b.a) * b.r;
+        });
+      add(petals.holder, dt => petals.tick(dt));
+    } },
+
+    { view: [0.6, 1.18, 1.05], hold: 4.0, run() {           // 11 Dhupa
+      const stick = new THREE.Mesh(
+        new THREE.CylinderGeometry(R * 0.008, R * 0.008, H * 0.22, 6),
+        matt(0x6b4b2a));
+      stick.position.set(R * 0.72, H * 0.11, R * 0.30);
+      add(stick, () => {});
+      const s = swarm(new THREE.PlaneGeometry(1, 1), [C.smoke], 150,
+        () => ({ a: rnd(0, 6.3), r: rnd(0, R * 0.05),
+                 x: R * 0.72, z: R * 0.30, y: H * rnd(0.22, 0.4),
+                 s: R * rnd(0.03, 0.08), o: 1 }),
+        (b, dt) => {
+          b.y += dt * H * 0.30;
+          b.a += dt * 1.5;
+          b.r += dt * R * 0.09;
+          b.s += dt * R * 0.05;
+          b.x = R * 0.72 + Math.cos(b.a) * b.r;
+          b.z = R * 0.30 + Math.sin(b.a) * b.r;
+          b.rz += dt * 0.5;
+          if (b.y > H * 1.5) { b.y = H * 0.24; b.r = rnd(0, R * 0.05); b.s = R * 0.03; }
         });
       s.holder.children.forEach(m => {
-        m.material.transparent = true; m.material.opacity = 0.22;
+        m.material.transparent = true; m.material.opacity = 0.16;
+        m.material.depthWrite = false;
       });
       add(s.holder, dt => s.tick(dt));
-    },
-    // 12 Dipa - the lamp carried round. A real light, not a painted one.
-    () => {
-      const lamp = new THREE.Mesh(
-        new THREE.SphereGeometry(R * 0.035, 12, 10),
+    } },
+
+    { view: [0.3, 1.30, 0.95], hold: 5.0, run() {           // 12 Dipa
+      meru.setKeyLight?.(0.22);            // let the flame do the lighting
+      const lamp = new THREE.Group();
+      const dish = new THREE.Mesh(
+        new THREE.SphereGeometry(R * 0.055, 16, 10, 0, 6.3, Math.PI / 2, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: C.brass, metalness: 0.9, roughness: 0.3 }));
+      const ghee = new THREE.Mesh(
+        new THREE.CircleGeometry(R * 0.048, 20), matt(C.ghee, 1, 0.4));
+      ghee.rotation.x = -Math.PI / 2; ghee.position.y = R * 0.006;
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(R * 0.020, R * 0.075, 10),
         new THREE.MeshBasicMaterial({ color: C.flame }));
-      const glow = new THREE.PointLight(C.flame, 6, R * 3.2, 2);
-      lamp.add(glow);
+      flame.position.y = R * 0.045;
+      const light = new THREE.PointLight(C.flame, 22, R * 5, 2);
+      light.position.y = R * 0.05;
+      lamp.add(dish, ghee, flame, light);
       add(lamp, (dt, age) => {
-        const a = age * 1.15;
-        lamp.position.set(Math.cos(a) * R * 0.85,
-                          H * (0.45 + 0.24 * Math.sin(age * 2.2)),
-                          Math.sin(a) * R * 0.85);
+        const a = -age * 1.05;                      // keep it to the right
+        lamp.position.set(Math.cos(a) * R * 0.92,
+                          H * (0.40 + 0.22 * Math.sin(age * 1.7)),
+                          Math.sin(a) * R * 0.92);
+        const f = 0.85 + 0.15 * Math.sin(age * 19) + 0.06 * Math.sin(age * 7);
+        flame.scale.set(1, f, 1);
+        light.intensity = 22 * f;
       });
-    },
-    // 13 Naivedya - food set at the four gates
-    () => {
+    } },
+
+    { view: [0, 1.32, 1.05], hold: 3.2, run() {             // 13 Naivedya
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2;
+        const x = Math.cos(a) * R * 0.92, z = Math.sin(a) * R * 0.92;
+        const g = new THREE.Group();
         const bowl = new THREE.Mesh(
-          new THREE.SphereGeometry(R * 0.055, 14, 10, 0, Math.PI * 2, 0, Math.PI / 2),
-          flat(C.food));
-        bowl.rotation.x = Math.PI;
-        bowl.position.set(Math.cos(a) * R * 0.95, 0.06, Math.sin(a) * R * 0.95);
-        bowl.scale.setScalar(0.01);
-        add(bowl, (dt, age) => bowl.scale.setScalar(
-          easeOut(Math.min(1, Math.max(0, age - k * 0.12) / 0.5))));
+          new THREE.SphereGeometry(R * 0.062, 18, 12, 0, 6.3, Math.PI / 2, Math.PI / 2),
+          new THREE.MeshStandardMaterial({ color: C.brass, metalness: 0.85, roughness: 0.35 }));
+        const heap = new THREE.Mesh(
+          new THREE.SphereGeometry(R * 0.050, 16, 10, 0, 6.3, 0, Math.PI / 2),
+          matt(C.food, 1, 0.85));
+        heap.position.y = R * 0.004;
+        g.add(bowl, heap);
+        g.position.set(x, ground(x, z), z);
+        g.scale.setScalar(0.01);
+        add(g, (dt, age) =>
+          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.14) / 0.5))));
       }
-    },
-    // 14 Tambula - betel, after the meal
-    () => {
+    } },
+
+    { view: [0, 1.32, 1.05], hold: 3.0, run() {             // 14 Tambula
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
-        const leaf = new THREE.Mesh(
-          new THREE.ConeGeometry(R * 0.05, R * 0.11, 3), flat(0x4c7a3c));
-        leaf.position.set(Math.cos(a) * R * 0.9, 0.08, Math.sin(a) * R * 0.9);
-        leaf.rotation.y = -a;
-        leaf.scale.setScalar(0.01);
-        add(leaf, (dt, age) => leaf.scale.setScalar(
-          easeOut(Math.min(1, Math.max(0, age - k * 0.12) / 0.5))));
+        const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;
+        const g = new THREE.Group();
+        for (let j = 0; j < 2; j++) {
+          const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.6));
+          leaf.scale.setScalar(R * 0.10);
+          leaf.rotation.set(-Math.PI / 2, 0, j * 0.7 - 0.35);
+          leaf.position.y = R * 0.004 * j;
+          g.add(leaf);
+        }
+        const nut = new THREE.Mesh(
+          new THREE.SphereGeometry(R * 0.016, 10, 8), matt(0xb5651d));
+        nut.position.set(0, R * 0.014, R * 0.02);
+        g.add(nut);
+        g.position.set(x, ground(x, z), z);
+        g.rotation.y = -a;
+        g.scale.setScalar(0.01);
+        add(g, (dt, age) =>
+          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.14) / 0.5))));
       }
-    },
-    // 15 Pradakshina - once round, keeping it to the right
-    () => {
-      meru.circumambulate();
-    },
-    // 16 Namaskara - down to the ground, then back to standing
-    () => {
-      meru.bow();
-    },
+    } },
+
+    { view: null, hold: 9.6, run() { meru.circumambulate(9000); } },   // 15
+    { view: null, hold: 4.0, run() { meru.bow(3400); } },              // 16
   ];
 
-  // ---- driving ------------------------------------------------------------
+  // ---- driving ----------------------------------------------------------
 
   function go(i) {
     if (i < 0 || i >= acts.length) return;
     clear();
-    state.step = i;
-    state.t = 0;
-    acts[i]();
+    st.step = i;
+    st.t = 0;
+    const a = acts[i];
+    st.hold = a.hold || 3.4;
+    if (a.view) meru.look(a.view[0], a.view[1], a.view[2], 900);
+    a.run();
     meru.onPujaStep?.(i);
   }
 
@@ -340,30 +513,24 @@ export function createPuja(meru) {
     const now = performance.now();
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    for (let k = live.length - 1; k >= 0; k--) {
-      const r = live[k];
-      r.age += dt;
-      r.tick(dt, r.age);
-    }
-    if (state.playing) {
-      state.t += dt;
-      if (state.t > state.hold) {
-        if (state.step >= acts.length - 1) { state.playing = false; meru.onPujaEnd?.(); }
-        else go(state.step + 1);
+    for (const r of live) { r.age += dt; r.tick(dt, r.age); }
+    if (st.playing) {
+      st.t += dt;
+      if (st.t > st.hold) {
+        if (st.step >= acts.length - 1) { st.playing = false; meru.onPujaEnd?.(); }
+        else go(st.step + 1);
       }
     }
   }
 
   return {
-    UPACHARAS,
-    tick,
-    go,
-    get step() { return state.step; },
-    get playing() { return state.playing; },
-    next: () => go(Math.min(acts.length - 1, state.step + 1)),
-    prev: () => go(Math.max(0, state.step - 1)),
-    play: () => { state.playing = true; if (state.step < 0) go(0); },
-    pause: () => { state.playing = false; },
-    stop: () => { state.playing = false; state.step = -1; clear(); meru.onPujaStep?.(-1); },
+    UPACHARAS, tick, go,
+    get step() { return st.step; },
+    get playing() { return st.playing; },
+    next: () => go(Math.min(acts.length - 1, st.step + 1)),
+    prev: () => go(Math.max(0, st.step - 1)),
+    play: () => { st.playing = true; if (st.step < 0) go(0); },
+    pause: () => { st.playing = false; },
+    stop: () => { st.playing = false; st.step = -1; clear(); meru.view('front'); meru.onPujaStep?.(-1); },
   };
 }

@@ -6,6 +6,43 @@ const $$ = s => [...document.querySelectorAll(s)];
 let doc, variant = 'huet', palette = 'ink', meru = null;
 const data = () => doc.variants[variant];
 
+// ------------------------------------------------------------------- theme
+
+// Three states, only two of them stored: follow the system, or override it.
+// Clicking always moves to the opposite of what is currently showing, so the
+// button does what it looks like it will do whichever way the system is set.
+const themeBtn = $('#theme');
+
+function showing() {
+  const set = document.documentElement.dataset.theme;
+  if (set === 'light' || set === 'dark') return set;
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function paintTheme() {
+  const now = showing();
+  const next = now === 'dark' ? 'light' : 'dark';
+  themeBtn.querySelector('use')
+    .setAttribute('href', now === 'dark' ? '#i-sun' : '#i-moon');
+  themeBtn.setAttribute('aria-label', `Switch to ${next} theme`);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = getComputedStyle(document.documentElement)
+    .getPropertyValue('--paper').trim();
+  if (doc) paint();          // rebake the SVG download in the new colours
+}
+
+themeBtn.addEventListener('click', () => {
+  document.documentElement.dataset.theme = showing() === 'dark' ? 'light' : 'dark';
+  try { localStorage.setItem('theme', document.documentElement.dataset.theme); }
+  catch (e) { /* private mode; the choice just will not persist */ }
+  paintTheme();
+});
+
+// follow the system while no override is stored
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!document.documentElement.dataset.theme) paintTheme();
+});
+
 // -------------------------------------------------------------------- flat
 
 function options() {
@@ -232,7 +269,7 @@ whenNear($('#stage3d'), startMeru);
 
 fetch('./data/sri-yantra.json')
   .then(r => r.json())
-  .then(j => { doc = j; fillTables(); paint(); })
+  .then(j => { doc = j; fillTables(); paint(); paintTheme(); })
   .catch(err => {
     $('#stage2d').textContent = 'could not load the geometry: ' + err.message;
   });

@@ -80,6 +80,7 @@ export function mount(canvas, url) {
   const rim = new THREE.DirectionalLight(0x9fc4e8, 1.1);
   rim.position.set(-6, 3, -4);
   scene.add(key, rim);
+  const KEY0 = key.intensity, RIM0 = rim.intensity, ENV0 = 1;
 
   const state = {
     scene, camera, renderer, controls,
@@ -269,6 +270,26 @@ export function mount(canvas, url) {
             top ? TOP_PHI : state.home.phi,
             state.home.radius * (top ? 1.42 : 1), 750);
   };
+  // A free look, for the puja: theta and phi absolute, radius as a multiple of
+  // the framed distance.
+  state.look = (theta, phi, mul = 1, ms = 900) => {
+    if (!state.home) return;
+    state.touched = false;
+    glideTo(theta, phi, state.home.radius * mul, ms);
+  };
+  state.homeSpherical = () => state.home;
+
+  // Dim the room so a flame can be the thing lighting the mountain.
+  state.setKeyLight = k => {
+    key.intensity = KEY0 * k;
+    rim.intensity = RIM0 * k;
+    if (state.mesh) {
+      state.mesh.material.envMapIntensity =
+        MATERIALS[state.material].envMapIntensity * (0.25 + 0.75 * k);
+      state.mesh.material.needsUpdate = true;
+    }
+  };
+
   state.reset = () => state.view('front');
   state.squareUp = squareUp;
 

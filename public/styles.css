@@ -14,6 +14,8 @@
   --e3: #5f7a55;   /* bahirdasara  */
   --e4: #3f6377;   /* chaturdasara */
 
+  --stage-bg: #efe9df;
+
   --ui: "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
         system-ui, sans-serif;
   --mono: "Geist Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
@@ -24,10 +26,14 @@
 /* Dark is not the light theme inverted. A white-on-black yantra reads as a
    photographic negative; warming the line work to a gilt parchment and taking
    the enclosure fills up in both saturation and luminance makes it read as
-   what it is - gold laid on a dark ground. Flat colour still, no glows. */
+   what it is - gold laid on a dark ground. Flat colour still, no glows.
+
+   Two selectors carry the same values. The media query is the default and
+   yields to an explicit choice; the attribute is that choice, set from
+   localStorage before first paint. Keep the two blocks identical. */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --paper: #12110e; --paper-2: #1a1815;
+  :root:not([data-theme="light"]) {
+    --paper: #12110e; --paper-2: #1a1815; --stage-bg: #0e0d0b;
     --ink: #ecdfc2; --ink-2: #a2957e; --rule: #37312a;
     --accent: #e0714f;
     --e0: #e04a30;   /* trikona      */
@@ -36,6 +42,16 @@
     --e3: #7dab60;   /* bahirdasara  */
     --e4: #4f92c4;   /* chaturdasara */
   }
+}
+:root[data-theme="dark"] {
+    --paper: #12110e; --paper-2: #1a1815; --stage-bg: #0e0d0b;
+    --ink: #ecdfc2; --ink-2: #a2957e; --rule: #37312a;
+    --accent: #e0714f;
+    --e0: #e04a30;   /* trikona      */
+    --e1: #e5822f;   /* ashtakona    */
+    --e2: #e0ab3e;   /* antardasara  */
+    --e3: #7dab60;   /* bahirdasara  */
+    --e4: #4f92c4;   /* chaturdasara */
 }
 
 * { box-sizing: border-box; }
@@ -145,8 +161,7 @@ b { font-weight: 600; }
   border: 1px solid var(--rule); border-radius: 12px;
 }
 .stage svg { width: 100%; height: 100%; }
-.stage.dark { background: var(--paper-2); }
-@media (prefers-color-scheme: dark) { .stage.dark { background: #0e0d0b; } }
+.stage.dark { background: var(--stage-bg); }
 #gl { width: 100%; height: 100%; display: block; }
 .loading {
   position: absolute; inset: 0; display: grid; place-items: center;
@@ -175,6 +190,9 @@ b { font-weight: 600; }
   border: 1px solid var(--rule); border-radius: 999px;
 }
 .ghost:hover { color: var(--ink); border-color: var(--ink-2); }
+.ghost.icon-only { padding: 6px; line-height: 0; border-radius: 50%; }
+.ghost.icon-only .i { margin: 0; width: 1.05rem; height: 1.05rem; }
+.topbar nav { align-items: center; }
 
 select {
   font: inherit; font-size: 13.5px; padding: 7px 10px;
