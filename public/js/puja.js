@@ -206,10 +206,18 @@ export function createPuja(meru) {
   function water(fromY, count, spread = 0.10, flow = 0.62) {
     const s = swarm(geo.drop, [C.water], count,
       () => {
-        const a = rnd(0, Math.PI * 2), r = rnd(0, R * spread);
-        return { a, r, x: Math.cos(a) * r, z: Math.sin(a) * r,
-                 y: fromY + rnd(0, H * 0.12), v: rnd(0, 0.3),
-                 sx: R * 0.015, sy: R * 0.028, sz: R * 0.015, run: false };
+        // Start them scattered through the cycle. Spawned together they fall
+        // together, land together and restart together, and what you see is a
+        // clump pulsing rather than a stream running.
+        const a = rnd(0, Math.PI * 2);
+        const running = Math.random() < 0.62;
+        const r = running ? rnd(R * spread, R * 1.05) : rnd(0, R * spread);
+        const x = Math.cos(a) * r, z = Math.sin(a) * r;
+        return { a, r, x, z,
+                 y: running ? ground(x, z) + R * 0.010
+                            : rnd(ground(x, z) + R * 0.02, fromY + H * 0.12),
+                 v: running ? 0 : rnd(0, 1.2),
+                 sx: R * 0.015, sy: R * 0.028, sz: R * 0.015, run: running };
       },
       (b, dt) => {
         if (b.run) {
@@ -220,7 +228,7 @@ export function createPuja(meru) {
           // fall freely off a step, cling to the tread
           if (b.y - g > R * 0.02) { b.v += dt * 2.6; b.y -= b.v * dt; }
           else { b.y = g + R * 0.010; b.v = 0; }
-          b.sy = R * 0.020;
+          b.sy = R * 0.024;
           if (b.r > R * 1.12) {
             b.a = rnd(0, Math.PI * 2);
             b.r = rnd(0, R * spread);
