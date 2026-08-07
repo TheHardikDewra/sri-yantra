@@ -315,6 +315,9 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
 }
 .upacharas li.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .upacharas li.on::before, .upacharas li.on em { color: var(--paper); opacity: .7; }
+/* the prose rule `.band li b { color: var(--ink) }` would paint the selected
+   card's heading ink-on-ink; the card's own colours must win */
+.upacharas li.on b { color: var(--paper); }
 .upacharas b { font-weight: 600; }
 .upacharas em { font-style: normal; color: var(--ink-2); display: block;
   font-size: 12px; margin-top: 1px; }

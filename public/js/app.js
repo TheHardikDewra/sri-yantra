@@ -1,10 +1,66 @@
 import * as Y from './yantra2d.js';
+import { STATIC_HI, T_HI, ENCLOSURES_HI, AVARANA_HI, VERIFY_HI }
+  from './i18n.js';
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
 let doc, variant = 'huet', palette = 'ink', meru = null;
 const data = () => doc.variants[variant];
+
+// ---------------------------------------------------------------- language
+
+let lang = 'en';
+try { if (localStorage.getItem('lang') === 'hi') lang = 'hi'; } catch (e) {}
+
+const T_EN = {
+  notBegun: 'Not begun.', begin: 'Begin', resume: 'Resume', pause: 'Pause',
+  building: 'building the mountain…',
+  couldNotLoad3D: 'could not load the 3D view: ',
+  couldNotStart: 'could not start: ',
+  couldNotLoadGeom: 'could not load the geometry: ',
+  netError: 'network error',
+  caption: (i, u) => `${i + 1} of 16 · ${u.n} — ${u.e}`,
+  stamp: v => `${v.conditions_checked} conditions · worst residual ` +
+              `${v.worst_residual} · ${v.regions_in_yantra} triangles`,
+  digits: ' digits',
+};
+const t = k => (lang === 'hi' ? T_HI : T_EN)[k];
+
+// English lives in the HTML; it is cached here the first time Hindi replaces
+// it, so the toggle can restore it exactly.
+const enStore = new Map();
+function applyStatic() {
+  for (const [sel, hi, mode] of STATIC_HI) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    if (mode === 'text') {
+      const node = el.lastChild;
+      if (!node || node.nodeType !== Node.TEXT_NODE) continue;
+      if (!enStore.has(sel)) enStore.set(sel, node.textContent);
+      node.textContent = lang === 'hi' ? hi : enStore.get(sel);
+    } else {
+      if (!enStore.has(sel)) enStore.set(sel, el.innerHTML);
+      el.innerHTML = lang === 'hi' ? hi : enStore.get(sel);
+    }
+  }
+  document.documentElement.lang = lang;
+  const lb = $('#lang');
+  lb.textContent = lang === 'hi' ? 'EN' : 'हिं';
+  lb.setAttribute('aria-label',
+    lang === 'hi' ? 'Switch to English' : 'भाषा बदलें - हिन्दी');
+}
+
+// parts of the page that scripts rebuild re-register here
+const langHooks = [];
+
+$('#lang').addEventListener('click', () => {
+  lang = lang === 'hi' ? 'en' : 'hi';
+  try { localStorage.setItem('lang', lang); } catch (e) {}
+  applyStatic();
+  if (doc) fillTables();
+  for (const f of langHooks) f();
+});
 
 // ------------------------------------------------------------------- theme
 
@@ -107,8 +163,9 @@ $('#dl-png').addEventListener('click', ev => {
 
 function fillTables() {
   const d = data();
+  const enc = lang === 'hi' ? ENCLOSURES_HI : Y.ENCLOSURES;
 
-  $('#legend').replaceChildren(...Y.ENCLOSURES.map(([name, what, n], i) => {
+  $('#legend').replaceChildren(...enc.map(([name, what, n], i) => {
     const li = document.createElement('li');
     li.innerHTML = `<i style="background:var(--e${i})"></i>` +
                    `<b>${name}</b> <em>${what}</em><span>${n}</span>`;
@@ -127,28 +184,31 @@ function fillTables() {
   const rows = [
     ['conditions checked', v.conditions_checked, true],
     ['worst residual', v.worst_residual, true],
-    ['working precision', v.working_precision_digits + ' digits', true],
+    ['working precision', v.working_precision_digits + t('digits'), true],
     ['regions in the figure', v.regions_total, true],
     ['regions in the yantra', v.regions_in_yantra, true],
   ];
   for (const [k, ok] of Object.entries(v.structure)) rows.push([k, ok, ok]);
+  const label = k => (lang === 'hi' && VERIFY_HI[k]) || k;
   $('#verify tbody').replaceChildren(...rows.map(([k, val, ok]) => {
     const tr = document.createElement('tr');
-    const shown = val === true ? 'pass' : val === false ? 'FAIL' : val;
-    tr.innerHTML = `<td>${k}</td><td class="${ok ? 'ok' : 'no'}">${shown}</td>`;
+    const shown = val === true ? (lang === 'hi' ? 'ठीक' : 'pass')
+      : val === false ? (lang === 'hi' ? 'विफल' : 'FAIL') : val;
+    tr.innerHTML =
+      `<td>${label(k)}</td><td class="${ok ? 'ok' : 'no'}">${shown}</td>`;
     return tr;
   }));
 
   $('#tiers').replaceChildren(...d.avaranas.map(a => {
     const li = document.createElement('li');
-    li.innerHTML = `<b>${a.name}</b><em>${a.what}</em>`;
+    const hi = lang === 'hi' && AVARANA_HI[a.name];
+    li.innerHTML = hi ? `<b>${hi[0]}</b><em>${hi[1]}</em>`
+                      : `<b>${a.name}</b><em>${a.what}</em>`;
     return li;
   }));
 
   $('#hero-res').textContent = v.worst_residual;
-  $('#stamp').textContent =
-    `${v.conditions_checked} conditions · worst residual ${v.worst_residual} ` +
-    `· ${v.regions_in_yantra} triangles`;
+  $('#stamp').textContent = t('stamp')(v);
 }
 
 // -------------------------------------------------------------------- meru
@@ -167,14 +227,14 @@ async function startMeru() {
       meru.setSpin($('#c-spin').checked);
       meru.setEdges($('#c-edge').checked);
       startPuja().catch(err => {
-        $('#puja-caption').textContent = 'could not start: ' + err.message;
+        $('#puja-caption').textContent = t('couldNotStart') + err.message;
       });
     });
     // a failed mesh fetch fires no ready event; say so instead of spinning
     $('#gl').addEventListener('meru:error', e => {
       $('#loading').classList.remove('done');
       $('#loading').textContent =
-        'could not load the 3D view: ' + (e.detail?.message || 'network error');
+        t('couldNotLoad3D') + (e.detail?.message || t('netError'));
     });
     $$('#material button').forEach(b => b.addEventListener('click', () => {
       $$('#material button').forEach(x => x.classList.toggle('on', x === b));
@@ -189,7 +249,7 @@ async function startMeru() {
     }));
   } catch (err) {
     meru = null;
-    $('#loading').textContent = 'could not load the 3D view: ' + err.message;
+    $('#loading').textContent = t('couldNotLoad3D') + err.message;
   }
 }
 
@@ -204,29 +264,35 @@ async function startPuja() {
   meru.puja = puja;                       // the render loop drives it
 
   const list = $('#upacharas');
-  list.replaceChildren(...UPACHARAS.map((u, i) => {
-    const li = document.createElement('li');
-    li.innerHTML = `<span><b>${u.n}</b><em>${u.e}</em></span>`;
-    li.tabIndex = 0;
-    li.setAttribute('role', 'button');
-    const pick = () => { puja.pause(); puja.go(i); sync(); };
-    li.addEventListener('click', pick);
-    li.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
-    });
-    return li;
-  }));
+  function buildList() {
+    list.replaceChildren(...UPACHARAS.map((u, i) => {
+      const li = document.createElement('li');
+      li.innerHTML = lang === 'hi'
+        ? `<span><b>${u.nh}</b><em>${u.eh}</em></span>`
+        : `<span><b>${u.n}</b><em>${u.e}</em></span>`;
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      const pick = () => { puja.pause(); puja.go(i); sync(); };
+      li.addEventListener('click', pick);
+      li.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+      });
+      return li;
+    }));
+  }
+  buildList();
 
   const caption = $('#puja-caption');
   function sync() {
     const i = puja.step;
     [...list.children].forEach((li, k) => li.classList.toggle('on', k === i));
-    caption.textContent = i < 0
-      ? 'Not begun.'
-      : `${i + 1} of 16 · ${UPACHARAS[i].n} — ${UPACHARAS[i].e}`;
-    $('#puja-play').textContent = puja.playing ? 'Pause' : (i < 0 ? 'Begin' : 'Resume');
+    caption.textContent = i < 0 ? t('notBegun')
+      : t('caption')(i, UPACHARAS[i]);
+    $('#puja-play').textContent =
+      puja.playing ? t('pause') : (i < 0 ? t('begin') : t('resume'));
     if (i >= 0) list.children[i].scrollIntoView({ block: 'nearest' });
   }
+  langHooks.push(() => { buildList(); sync(); });
   meru.onPujaStep = sync;
   meru.onPujaEnd = sync;
 
@@ -282,9 +348,11 @@ whenNear($('#stage3d'), startMeru);
 
 // -------------------------------------------------------------------- boot
 
+applyStatic();
+
 fetch('./data/sri-yantra.json')
   .then(r => r.json())
   .then(j => { doc = j; fillTables(); paint(); paintTheme(); })
   .catch(err => {
-    $('#stage2d').textContent = 'could not load the geometry: ' + err.message;
+    $('#stage2d').textContent = t('couldNotLoadGeom') + err.message;
   });

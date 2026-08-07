@@ -183,6 +183,13 @@ figure — the Śiva yantra of kāpālika practice — so the Meru is only ever 
 the way up it is meant to stand. Straight down is fine and offered as a preset:
 that is how the flat yantra is read.
 
+The surface comes in what Merus are actually made of - gold, brass (pital),
+copper (tāmra), stone, and sphaṭika, the rock crystal that tradition holds
+highest for a Mahā Meru, rendered with real transmission.
+
+The page speaks English and Hindi: the हिं / EN toggle in the top bar switches
+everything, the sixteen services included.
+
 ## Ṣoḍaśopacāra
 
 The sixteen services, performed on the Meru. Each *upacāra* gets one act in
