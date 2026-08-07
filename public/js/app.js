@@ -200,6 +200,7 @@ function whenNear(el, fn, margin = 300) {
     done = true;
     removeEventListener('scroll', check);
     removeEventListener('resize', check);
+    document.removeEventListener('visibilitychange', check);
     clearInterval(timer);
     io?.disconnect();
     fn();
@@ -217,6 +218,10 @@ function whenNear(el, fn, margin = 300) {
   }
   addEventListener('scroll', check, { passive: true });
   addEventListener('resize', check, { passive: true });
+  // A hidden tab suspends timers and rAF, so a page opened in the background
+  // rightly builds nothing. Catch the moment it is looked at rather than
+  // waiting for the next poll.
+  document.addEventListener('visibilitychange', check);
   const timer = setInterval(check, 400);
   check();
 }
