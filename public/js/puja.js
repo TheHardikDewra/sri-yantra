@@ -595,16 +595,16 @@ export function createPuja(meru) {
         const a = k * Math.PI / 2;
         const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;   // on the bhupura
         const g = new THREE.Group();
-        const n = R * 0.22;
+        const n = R * 0.26;
         const bowl = new THREE.Mesh(
           new THREE.LatheGeometry(
             bowlProfile.map(([u, v]) => new THREE.Vector2(u * n, v * n)), 26),
           new THREE.MeshStandardMaterial({
-            color: C.brass, metalness: 0.92, roughness: 0.3,
-            side: THREE.DoubleSide }));
+            color: 0x7d5a24, metalness: 0.95, roughness: 0.22,
+            side: THREE.DoubleSide }));      // darker, so it is not gold on gold
         const heap = new THREE.Mesh(
           new THREE.SphereGeometry(n * 0.62, 18, 12, 0, 6.3, 0, Math.PI / 2),
-          matt(C.food, 1, 0.9));
+          matt(0xf6f0e2, 1, 0.95));          // rice
         heap.position.y = n * 0.34;
         g.add(bowl, heap);
         g.position.set(x, ground(x, z), z);     // base on the terrace
@@ -678,7 +678,8 @@ export function createPuja(meru) {
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.002;
       add(floor, () => {});
-      setTimeout(() => meru.circumambulate(9200), 700);
+      // walked at eye level, where passing the lamps reads as walking
+      setTimeout(() => meru.circumambulate(9200, 1.38, 1.02), 700);
     } },
 
     { view: null, hold: 4.0, run() { meru.bow(3400); } },              // 16

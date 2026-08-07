@@ -296,9 +296,14 @@ export function mount(canvas, url) {
   // Pradakshina: one full turn, kept to the right. Clockwise seen from above
   // means the figure stays on the walker's right, which is the whole point of
   // the rite, so the azimuth decreases.
-  state.circumambulate = (ms = 9000) => {
+  // phi is passed rather than read: the circuit starts while the move into
+  // position is still gliding, and here() would catch it half way and walk the
+  // circle at whatever angle it happened to be passing through.
+  state.circumambulate = (ms = 9000, phi = null, mul = null) => {
     const s0 = here();
-    glideTo(s0.theta - 2 * Math.PI, s0.phi, s0.radius, ms, false);
+    glideTo(s0.theta - 2 * Math.PI,
+            phi === null ? s0.phi : phi,
+            mul === null ? s0.radius : state.home.radius * mul, ms, false);
   };
   // Namaskara: down to the ground and back up.
   state.bow = (ms = 3400) => {
