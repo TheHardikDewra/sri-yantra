@@ -143,6 +143,7 @@ export function mount(canvas, url) {
 
   canvas.addEventListener('pointerdown', () => {
     state.glide = null;
+    state.tglide = null;
     state.cancelWalk?.();
     state.touched = true;      // stop reframing once they have taken the wheel
   });
@@ -269,8 +270,8 @@ export function mount(canvas, url) {
         const theta = Math.PI / 2 - w.a0;
         state.walking = null;
         controls.enabled = true;
-        controls.target.set(0, state.ty0 ?? 0, 0);
-        glideTo(theta, 1.38, state.home.radius * 1.02, 800);
+        glideTarget(900);
+        glideTo(theta, 1.38, state.home.radius * 1.02, 900);
       }
     } else if (state.glide) {
       const g = state.glide;
@@ -281,6 +282,15 @@ export function mount(canvas, url) {
         g.from.phi + (g.to.phi - g.from.phi) * e,
         g.from.theta + (g.to.theta - g.from.theta) * e));
       if (k >= 1) state.glide = null;
+    }
+    if (state.tglide) {
+      // the look-target eases home too - resetting it in one frame is the
+      // jump cut, even when the camera itself never moves
+      const g = state.tglide;
+      const k = Math.min(1, (performance.now() - g.t0) / g.ms);
+      const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      controls.target.copy(g.from).lerp(g.to, e);
+      if (k >= 1) state.tglide = null;
     }
     state.puja?.tick();
     if (!state.walking) controls.update();
@@ -363,11 +373,18 @@ export function mount(canvas, url) {
       a0: Math.PI / 2 - s0.theta,
     };
   };
+  function glideTarget(ms = 700) {
+    state.tglide = {
+      from: controls.target.clone(),
+      to: new THREE.Vector3(0, state.ty0 ?? 0, 0),
+      t0: performance.now(), ms,
+    };
+  }
   state.cancelWalk = () => {
     if (!state.walking) return;
     state.walking = null;
     controls.enabled = true;
-    controls.target.set(0, state.ty0 ?? 0, 0);
+    glideTarget(700);
   };
   // kept for anything that still wants the old turntable circuit
   state.circumambulate = (ms = 9000, phi = null, mul = null) => {

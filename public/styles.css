@@ -251,7 +251,10 @@ select {
 }
 
 /* the sixteen's transport: icon buttons and a per-act progress bar */
-.player { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.player {
+  display: flex; flex-wrap: wrap; align-items: center;
+  justify-content: center; gap: 7px;
+}
 .pbtn {
   font: inherit; display: inline-flex; align-items: center;
   justify-content: center; width: 34px; height: 34px; border-radius: 50%;
