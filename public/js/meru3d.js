@@ -257,7 +257,7 @@ export function mount(canvas, url) {
         : k > 1 - r0 ? 1 - ((1 - k) * (1 - k)) / (2 * r0 * (1 - r0))
         : (k - r0 / 2) / (1 - r0);
       const a = w.a0 + Math.PI * 2 * e;
-      const bob = Math.sin(e * Math.PI * 2 * 24) * w.eye * 0.012;   // footfall
+      const bob = Math.sin(e * Math.PI * 2 * 20) * w.eye * 0.008;   // footfall
       camera.position.set(Math.cos(a) * w.rad, w.eye + bob,
                           Math.sin(a) * w.rad);
       controls.target.set(
@@ -349,15 +349,17 @@ export function mount(canvas, url) {
   // little inward - so the Meru rides on the walker's right and the lamps
   // stream past. Decreasing OrbitControls-theta is increasing plan angle,
   // which is clockwise seen from above: the deity stays on the right hand.
-  state.walkCircuit = (ms = 9200, rad = 1, eye = 1) => {
+  state.walkCircuit = (ms = 13500, rad = 1, eye = 1) => {
     if (!state.home) return;
     const s0 = here();
     state.cancelWalk();
     controls.enabled = false;
     state.glide = null;
+    // gaze biased toward the Meru (pull) with a modest look-ahead, so the
+    // turn is gentle rather than a spin
     state.walking = {
       t0: performance.now(), ms, rad, eye,
-      look: rad * 0.62, pull: rad * 0.30,
+      look: rad * 0.45, pull: rad * 0.42,
       a0: Math.PI / 2 - s0.theta,
     };
   };
@@ -374,15 +376,23 @@ export function mount(canvas, url) {
             phi === null ? s0.phi : phi,
             mul === null ? s0.radius : state.home.radius * mul, ms, false);
   };
-  // Namaskara: down to the ground and back up. The return glide is armed on
-  // a timer, so it can be cancelled if the act is left before it fires.
+  // Namaskara: square up before the deity, go down to the ground, hold a
+  // beat, and rise back home. Deliberate, not a camera wobble. The chained
+  // moves are armed on one timer slot, so leaving the act cancels cleanly.
   let bowTimer = null;
-  state.bow = (ms = 3400) => {
-    const s0 = here();
-    glideTo(s0.theta, controls.maxPolarAngle, s0.radius, ms / 2);
+  state.bow = (ms = 4600) => {
     clearTimeout(bowTimer);
-    bowTimer = setTimeout(() => glideTo(state.home.theta, state.home.phi,
-                                        state.home.radius, ms / 2), ms / 2);
+    const s = here();
+    const theta = Math.abs(((s.theta % (2 * Math.PI)) + 2 * Math.PI)
+                           % (2 * Math.PI) - Math.PI) < Math.PI / 2
+      ? Math.PI : 0;
+    glideTo(theta, state.home.phi, state.home.radius, ms * 0.20);
+    bowTimer = setTimeout(() => {
+      glideTo(theta, controls.maxPolarAngle, state.home.radius * 0.92,
+              ms * 0.30);
+      bowTimer = setTimeout(() => glideTo(theta, state.home.phi,
+        state.home.radius, ms * 0.34), ms * 0.44);
+    }, ms * 0.22);
   };
   state.cancelBow = () => clearTimeout(bowTimer);
   return state;
