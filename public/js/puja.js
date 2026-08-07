@@ -348,23 +348,59 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0.7, 1.16, 1.00], hold: 3.6, run() {           // 7 Vastra
-      // Wound round and up, riding the silhouette. The radius has to be asked
-      // of the mountain at each height or the band saws straight through it.
-      const pts = [], turns = 2.0;
-      for (let i = 0; i <= 300; i++) {
-        const t = i / 300;
-        const a = t * Math.PI * 2 * turns;
-        const y = H * (0.10 + t * 0.56);
-        const rad = radiusAt(y, a) + R * 0.105;   // proud of the wall
-        pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
+    { view: [0.7, 1.14, 1.02], hold: 3.8, run() {           // 7 Vastra
+      // A thread wound round a staircase is invisible: it sits in the angle
+      // between tread and riser and every terrace above it hides it. Cloth
+      // should be cloth - a sheet fitted to the mountain and standing a little
+      // off it, built by asking the silhouette its radius at every point of a
+      // grid in angle and height.
+      const NAv = 160, NH = 40;
+      const y0 = H * 0.14, y1 = H * 0.62, off = R * 0.045;
+      const pos = [], idx = [];
+      for (let j2 = 0; j2 < NH; j2++) {
+        const v = j2 / (NH - 1);
+        const y = y0 + v * (y1 - y0);
+        // hem the top and bottom in a little so it reads as a wrapped edge
+        const hem = off * (0.35 + 0.65 * Math.sin(Math.PI * Math.min(1, v * 3)) );
+        for (let i2 = 0; i2 < NAv; i2++) {
+          const a = (i2 / NAv) * Math.PI * 2;
+          const rad = radiusAt(y, a) + (j2 === 0 || j2 === NH - 1 ? hem * 0.4 : off);
+          pos.push(Math.cos(a) * rad, y, Math.sin(a) * rad);
+        }
       }
-      const cloth = new THREE.Mesh(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 320, R * 0.055, 6, false),
-        matt(C.cloth, 1, 0.88));
+      for (let j2 = 0; j2 < NH - 1; j2++) {
+        for (let i2 = 0; i2 < NAv; i2++) {
+          const a0 = j2 * NAv + i2, a1 = j2 * NAv + (i2 + 1) % NAv;
+          const b0 = a0 + NAv, b1 = a1 + NAv;
+          idx.push(a0, b0, b1, a0, b1, a1);
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setIndex(idx);
+      g.computeVertexNormals();
+      const cloth = new THREE.Mesh(g, matt(C.cloth, 1, 0.9));
       add(cloth, (dt, age) => {
-        cloth.geometry.setDrawRange(0,
-          Math.floor(cloth.geometry.index.count * ease(Math.min(1, age / 1.8))));
+        // drawn on from the hem upward
+        const k = ease(Math.min(1, age / 1.6));
+        g.setDrawRange(0, Math.floor(idx.length * k / 6) * 6);
+      });
+
+      // a sash over it, so it does not read as a painted band
+      const sash = [];
+      for (let i2 = 0; i2 <= 200; i2++) {
+        const t = i2 / 200, a = t * Math.PI * 2 * 1.15 + 0.6;
+        const y = y0 + (0.15 + 0.75 * t) * (y1 - y0);
+        sash.push(new THREE.Vector3(
+          Math.cos(a) * (radiusAt(y, a) + off * 2.4), y,
+          Math.sin(a) * (radiusAt(y, a) + off * 2.4)));
+      }
+      const band = new THREE.Mesh(
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sash), 220, R * 0.030, 6, false),
+        matt(0xf0c33a, 1, 0.7));
+      add(band, (dt, age) => {
+        band.geometry.setDrawRange(0,
+          Math.floor(band.geometry.index.count * ease(Math.min(1, Math.max(0, age - 0.7) / 1.3))));
       });
     } },
 
@@ -546,7 +582,7 @@ export function createPuja(meru) {
       });
     } },
 
-    { view: [0, 1.00, 0.90], hold: 3.6, run() {             // 13 Naivedya
+    { view: [0, 0.92, 1.20], hold: 3.8, run() {             // 13 Naivedya
       // These were half-spheres placed with their centre on the surface, so
       // the bowl was buried and only its dome showed - a ball stuck in the
       // mountain. A lathed katori stands on its own base at ground level.
@@ -557,9 +593,9 @@ export function createPuja(meru) {
       ];
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2;
-        const x = Math.cos(a) * R * 0.94, z = Math.sin(a) * R * 0.94;
+        const x = Math.cos(a) * R * 1.02, z = Math.sin(a) * R * 1.02;   // in the gate mouths
         const g = new THREE.Group();
-        const n = R * 0.20;
+        const n = R * 0.22;
         const bowl = new THREE.Mesh(
           new THREE.LatheGeometry(
             bowlProfile.map(([u, v]) => new THREE.Vector2(u * n, v * n)), 26),
@@ -578,10 +614,10 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0.5, 1.00, 0.90], hold: 3.4, run() {           // 14 Tambula
+    { view: [0.5, 0.92, 1.20], hold: 3.6, run() {           // 14 Tambula
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
-        const x = Math.cos(a) * R * 0.94, z = Math.sin(a) * R * 0.94;
+        const x = Math.cos(a) * R * 0.96, z = Math.sin(a) * R * 0.96;
         const g = new THREE.Group();
         for (let j = 0; j < 3; j++) {
           const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.55));
