@@ -27,13 +27,14 @@ conditions hold (Chiodo, "On the construction of the Sri Yantra", C. R. Math.
 (ii)  The apex of t' is the base point (base midpoint) of t'' for
       (t', t'') in (t1,t6), (t8,t1), (t6,t2), (t9,t3), (t5,t7), (t4,t8), (t2,t9).
 
-      Chiodo lists the last six.  The pair (t1,t6) is the seventh and is used
-      implicitly in his own construction: section 2.3.2 fixes the leg of t1 as
-      "a ray r stemming from Q", and Q is defined in section 2.2.2 as the base
-      point of t6.  With it, every apex except those of t3 and t7 (which sit on
-      E) is the base point of another triangle, and the system becomes exactly
-      determined by the four parameters below - which is the count Chiodo
-      states.  Without it the solution set has one extra dimension.
+      All seven pairs are in Chiodo's published list.  (t1,t6) deserves care
+      because it is the easiest to lose in transcription: without it the
+      solution set gains one dimension (the Jacobian rank at the solution
+      drops from 21 to 20) and the figure is no longer determined by the four
+      parameters below.  His construction uses it as "a ray r stemming from Q"
+      (section 2.3.2), with Q the base point of t6 (section 2.2.2).  With all
+      seven, every apex except those of t3 and t7 (which sit on E) is the base
+      point of another triangle.
 
 (iii) On each side of the axis, the leg of the downward triangle t', the leg of
       the upward triangle t''', and the base of t'' meet in a single point, for

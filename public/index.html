@@ -7,6 +7,11 @@
 <meta name="description" content="The Sri Yantra with every concurrency condition satisfied to 60 significant digits, drawn flat and raised into the Maha Meru. Free SVG, PNG, GLB and STL.">
 <meta property="og:title" content="Śrī Yantra — solved exactly">
 <meta property="og:description" content="Nine triangles, 49 conditions, worst residual 1e-61. The flat figure and the 3D Mahā Meru, free to download.">
+<meta property="og:url" content="https://sriyantra.vercel.app/">
+<meta property="og:image" content="https://sriyantra.vercel.app/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="1200">
+<meta name="twitter:card" content="summary">
 <meta name="theme-color" content="#f7f3ec">
 <script>
 // Runs before the stylesheet so a stored choice never flashes the wrong theme.
@@ -232,19 +237,26 @@ try {
       single point — twelve times over.</li>
     </ol>
 
-    <p>That is 22 independent equations in 27 unknowns. Fixing E as the unit
-    circle spends two of the five remaining freedoms, leaving four real
-    parameters: the base heights of t₃, t₆, t₇ and t₉. Choose those and every
-    other number in the figure is forced.</p>
+    <p>That is 21 independent equations in 27 unknowns: seven from (ii), twelve
+    from (iii), and two from (i), since sharing a circumcircle means equal
+    centre and equal radius. Solutions therefore form a six-parameter family.
+    Fixing E as the unit circle spends the two similarity freedoms, scale and
+    vertical shift, leaving four real parameters: the base heights of t₃, t₆,
+    t₇ and t₉. Choose those and every other number in the figure is forced.</p>
 
-    <h3>A seventh pair in condition (ii)</h3>
-    <p>Chiodo's published list for (ii) has six pairs. With six, the system
-    keeps one degree of freedom too many and is <i>not</i> determined by his own
-    four parameters. The missing pair is <b>(t₁,t₆)</b> — and his construction
-    already relies on it: §2.3.2 fixes the leg of t₁ as “a ray <i>r</i> stemming
-    from Q”, and §2.2.2 defines Q as the base point of t₆. Add it and the count
-    comes out exactly as stated. With it, every apex except those of t₃ and t₇,
-    which sit on E, is the base point of another triangle.</p>
+    <h3>The seventh pair is load-bearing</h3>
+    <p>All seven pairs in (ii) are Chiodo's; his definition lists them in full,
+    <b>(t₁,t₆)</b> included. It earns a note because it is the one a reader can
+    lose without noticing: drop it and nothing looks broken, the construction
+    still runs, yet the solution set gains a dimension (Jacobian rank 21 with
+    seven pairs, 20 with six, checked numerically at the solution) and the
+    figure stops being determined by the four parameters. The construction uses
+    the pair as “a ray <i>r</i> stemming from Q” in §2.3.2, with Q the base
+    point of t₆ per §2.2.2. With all seven, every apex except those of t₃ and
+    t₇, which sit on E, is the base point of another triangle. The verification
+    here asserts all seven, so a transcription that loses one fails loudly. An
+    earlier version of this page claimed the pair was missing from Chiodo's
+    published list; it is not, and the error was ours.</p>
 
     <h3>How it is solved</h3>
     <p>Rather than throw 27 unknowns at a solver, the conditions are applied in

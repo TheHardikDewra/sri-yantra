@@ -74,11 +74,13 @@ The nine triangles are solved from the concurrency conditions of Chiodo (2021)
 
 Two findings you should know before editing the solver:
 
-- **Chiodo's condition (ii) is missing a pair.** His published list has six.
-  The seventh is **(t₁,t₆)** — the apex of t₁ is the base point of t₆. Without
-  it the system keeps a spare degree of freedom and is *not* determined by his
-  own four parameters. His §2.3.2 already relies on it ("a ray *r* stemming
-  from Q"; §2.2.2 defines Q as the base point of t₆).
+- **CORRECTED 2026-08-08: Chiodo was never missing a pair.** The published
+  paper (the DOI edition the README cites; no arXiv variant exists) lists all
+  seven (ii)-pairs, **(t₁,t₆)** included, fourth in the list. What survives of
+  the old claim: with only six pairs the system really does keep a spare
+  degree of freedom (Jacobian rank 20 vs 21 at the solution), so the pair is
+  load-bearing and easy to lose in transcription. README, site and solver
+  docstring now say exactly that, and own the earlier misattribution.
 - **"43 triangles" is not all the regions.** The nine triangles cut the figure
   into **74**. The 43 are the odd-cover ones under the even-odd fill rule; all
   31 leftovers have even cover and 21 are quadrilaterals — which are genuinely
@@ -175,8 +177,11 @@ lathes and instanced swarms — no textures, no sprites.
   check `renderer.info.render.frame` is advancing.**
 - **Vastra above the drum.** The fitted sheet reads beautifully on the
   trivṛtta drum; higher up, where the terraces step in sharply, it tucks into
-  the step angles and is hard to see. Probably wants the hem raised or the
-  standoff scaled with local step depth.
+  the step angles and is hard to see. Update 2026-08-08: the audit found
+  `ground()`/`radiusAt()` were sampling the profile MIRRORED (the glTF y-up
+  flip negates plan y and the lookup ignored it) and up to 1.3 degrees off
+  bearing (uniform-grid indexing over deliberately non-uniform angles). Both
+  fixed - the cloth may simply sit right now; re-judge before touching.
 - **Gandha** is sandal marks on the tiers. It works but is the least
   interesting of the sixteen.
 
@@ -207,5 +212,15 @@ lathes and instanced swarms — no textures, no sprites.
 4. Consider sound-free pacing: `hold` values were tuned by feel, not tested
    as a continuous 16-step run.
 
-Nothing in `solver/` needs work. The geometry is finished and proven; every
-remaining task is in `public/js/puja.js` and is about how it *looks*.
+Update 2026-08-08: a full audit found and fixed real defects after all -
+the radial sweep was melting the bhūpura's T-gates (the gated square is not
+star-shaped; it is now two watertight shells, plinth as exact polygon prisms
++ mountain as the sweep, `Euler == 2 per shell`), the Meru's petals used a
+different curve than the SVG (now the same cubic, via a silhouette table),
+Pādya/Arghya spawned water inside the rock (now poured beyond the outermost
+tier still standing at the pour height), and the profile lookup was both
+mirrored and non-uniform-indexed (now converted and binary-searched;
+`meru-profile.json` is format 2: mountain tiers as r(θ) plus the bhūpura as
+its three outline polygons). The solve itself in `sri_yantra.py` and
+`arrangement.py` was and is clean - residuals 1e-61, all structure checks
+pass, regeneration byte-identical.

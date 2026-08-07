@@ -40,20 +40,28 @@ the half-width of that base, and the height of its apex. Following Chiodo
   of an upward triangle and the base of a third meet at a single point —
   twelve times over.
 
-That is 22 independent equations in 27 unknowns. Fixing E as the unit circle
-spends two of the five remaining freedoms, leaving four real parameters: the
-base heights of t₃, t₆, t₇ and t₉. Choose those and every other number is
-forced.
+That is 21 independent equations in 27 unknowns: seven from (ii), twelve from
+(iii), and two from (i), since sharing a circumcircle means equal centre and
+equal radius. Solutions therefore form a six-parameter family. Fixing E as the
+unit circle spends the two similarity freedoms, scale and vertical shift,
+leaving four real parameters: the base heights of t₃, t₆, t₇ and t₉. Choose
+those and every other number is forced.
 
-### A seventh pair in condition (ii)
+### The seventh pair is load-bearing
 
-Chiodo's published list for (ii) has six pairs. With six, the system keeps one
-degree of freedom too many and is *not* determined by his own four parameters.
-The missing pair is **(t₁,t₆)**, and his construction already relies on it:
-§2.3.2 fixes the leg of t₁ as "a ray *r* stemming from Q", and §2.2.2 defines Q
-as the base point of t₆. Add it and the count comes out exactly as he states.
-With it, every apex except those of t₃ and t₇ — which sit on E — is the base
-point of another triangle.
+All seven pairs in (ii) are Chiodo's; his definition lists them in full,
+**(t₁,t₆)** included. It earns a note because it is the one a reader can lose
+without noticing: drop it and nothing looks broken, the construction still
+runs, yet the solution set gains a dimension (Jacobian rank 21 with seven
+pairs, 20 with six, checked numerically at the solution) and the figure stops
+being determined by the four parameters. The construction uses the pair as
+"a ray *r* stemming from Q" in §2.3.2, with Q the base point of t₆ per §2.2.2.
+With all seven, every apex except those of t₃ and t₇, which sit on E, is the
+base point of another triangle. `residuals()` asserts all seven, so a
+transcription that loses one fails loudly here.
+
+An earlier version of this text claimed the pair was missing from Chiodo's
+published list. It is not - the error was ours, not his.
 
 ### How it is solved
 
@@ -133,8 +141,14 @@ outline is found by shooting a ray out from the centre and taking the last
 crossing at which the cover count is still d or more. That is exact and needs
 no polygon arithmetic.
 
-All ten outlines turn out to be star-shaped about the centre, so each is stored
-as a radius r(θ) and the solid is a staircase profile swept round the axis.
+The seven mountain outlines, trivalaya up to trikoṇa, are star-shaped about
+the centre, so each is stored as a radius r(θ) and swept round the axis. The
+gated square is **not** star-shaped: a radial sweep fills the T-portals'
+re-entrant corners and melts the gates into plain tabs (an earlier build did
+exactly that). The three bhūpura lines are therefore built as what they are -
+exact polygon prisms with ear-clipped caps and parallel-offset treads. The
+plinth and the mountain are two watertight shells, the mountain's base sunk a
+little into the plinth's cap so the pair unions cleanly in any slicer.
 
 Several tiers touch their neighbour exactly - the chaturdaśāra reaches r = 1 at
 the base corners of t₃ and t₇, which lie on E by condition (i), and every lotus
@@ -154,7 +168,7 @@ the written STL, checked as a file:
   [ok] every edge shared by exactly two facets
   [ok] every directed edge traversed once
   [ok] every directed edge has an opposite
-  [ok] Euler V-E+F == 2
+  [ok] Euler V-E+F == 2 per shell (2 shells)
   [ok] volume positive, so normals face out
 VERDICT: PASS
 ```
