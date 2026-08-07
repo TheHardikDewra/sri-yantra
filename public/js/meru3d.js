@@ -72,7 +72,10 @@ export function mount(canvas, url) {
   // The step has to follow the size of the delta, not just its sign: a trackpad
   // pinch is one gesture but arrives as a burst of dozens of small events, so a
   // fixed step per event runs away and the zoom feels wild.
-  controls.enableZoom = false;
+  //
+  // On touch there is no wheel: enableZoom there gates PINCH, which is the
+  // only zoom a phone has, so it stays on for coarse pointers.
+  controls.enableZoom = matchMedia('(pointer: coarse)').matches;
   canvas.addEventListener('wheel', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();

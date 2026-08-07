@@ -103,6 +103,7 @@ b { font-weight: 600; }
 .topbar nav { display: flex; gap: 22px; }
 .topbar nav a {
   font-size: 13.5px; color: var(--ink-2); text-decoration: none;
+  white-space: nowrap;
 }
 .topbar nav a:hover { color: var(--ink); }
 
@@ -163,7 +164,7 @@ b { font-weight: 600; }
 }
 .stage svg { width: 100%; height: 100%; }
 .stage.dark { background: var(--stage-bg); }
-#gl { width: 100%; height: 100%; display: block; }
+#gl { width: 100%; height: 100%; display: block; touch-action: none; }
 .loading {
   position: absolute; inset: 0; display: grid; place-items: center;
   font-size: 13px; color: var(--ink-2); pointer-events: none;
@@ -229,8 +230,10 @@ select {
 .rail {
   position: relative; display: flex; padding: 4px; gap: 2px;
   border: 1px solid var(--rule); border-radius: 999px; background: var(--paper);
-  flex-wrap: wrap;
+  max-width: 100%; overflow-x: auto; scrollbar-width: none;
 }
+.rail::-webkit-scrollbar { display: none; }
+.rail button { white-space: nowrap; flex: 0 0 auto; }
 .rail .thumb {
   position: absolute; background: var(--ink); border-radius: 999px;
   transition: left .22s cubic-bezier(.5, 0, .2, 1),
@@ -423,9 +426,23 @@ footer a { color: var(--ink-2); }
 @media (max-width: 760px) {
   .tiers, .cards { grid-template-columns: 1fr; }
 }
+@media (max-width: 640px) {
+  /* the labels cannot fit beside the brand and the two round buttons, and
+     wrapping them mid-word is worse - the icons carry the nav alone. The
+     text stays in the markup, so screen readers and the language swap keep
+     working. */
+  .topbar { padding: 0 14px; gap: 10px; }
+  .topbar nav { gap: 4px; }
+  .topbar nav a { font-size: 0; padding: 8px 7px; }
+  .topbar nav a .i { width: 19px; height: 19px; margin: 0; }
+  .topbar nav a:nth-child(3) { display: inline-flex; }
+}
 @media (max-width: 600px) {
   .band { padding: 52px 0; }
   .stage-wrap.tall .stage { aspect-ratio: 4 / 3; }
   .toolbar { flex-direction: column; align-items: stretch; }
   .tool { flex-direction: column; align-items: flex-start; }
+  .tool > .rail, .tool > .segmented, .tool > select { align-self: stretch; }
+  .segmented { flex-wrap: wrap; }
+  .segmented button { flex: 1 1 auto; }
 }
