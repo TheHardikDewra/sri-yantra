@@ -20,6 +20,9 @@ solver/sri_yantra.py    the conditions, and the solve
 solver/arrangement.py   the planar arrangement, and the 43 triangles
 solver/build.py         data + standalone SVG for the web page
 solver/meru.py          the Meru mesh, and the GLB / STL export
+public/js/yantra2d.js   the flat figure, drawn from the solved coordinates
+public/js/meru3d.js     the Meru viewer
+public/js/puja.js       the sixteen services
 public/                 the site (static, no build step)
 ```
 
@@ -165,6 +168,26 @@ The 3D view is clamped above the horizon. An inverted Śrī Yantra is a differen
 figure — the Śiva yantra of kāpālika practice — so the Meru is only ever shown
 the way up it is meant to stand. Straight down is fine and offered as a preset:
 that is how the flat yantra is read.
+
+## Ṣoḍaśopacāra
+
+The sixteen services, performed on the Meru. Each *upacāra* gets one act in
+three dimensions — water poured and let run down the terraces, cloth wound
+about the tiers, the thread laid across, flowers let fall, incense drawn up,
+the lamp carried round on an actual light, food and betel set at the four
+gates, one circumambulation kept to the right, and a prostration to close.
+Pradakṣiṇa decreases the azimuth, so the figure stays on the walker's right,
+which is the point of the rite.
+
+**No mantras.** The names of the services and what is done at each are open
+knowledge and are given in full. The syllables that accompany them are not on
+the page, and the sequence is written so that nothing depends on them.
+
+The panel sits beside the canvas rather than below it, since the whole point is
+to watch the offering while choosing it. Both columns are pinned to one height
+so the sixteen entries cannot stretch the canvas into a tall column, and the
+camera distance is computed from the viewport rather than a constant, so the
+mountain stays framed whatever shape the canvas takes.
 
 ## Running it
 

@@ -262,6 +262,10 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
   display: flex; flex-direction: column; min-height: 0; height: var(--meru-h);
   border: 1px solid var(--rule); border-radius: 12px; padding: 16px;
 }
+/* The panel has a fixed height, so in a column flex box everything above the
+   list gets shrunk to make room for it - which squashed the buttons to the
+   height of their own padding. Only the list is allowed to give. */
+.puja > * { flex: 0 0 auto; }
 .puja h3 { display: flex; align-items: center; margin: 0 0 8px; }
 .puja .fine { margin: 0 0 14px; }
 .puja .segmented { margin-bottom: 10px; }
@@ -269,7 +273,7 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
 .puja .hint { margin: 0 0 12px; min-height: 2.4em; }
 
 .upacharas {
-  flex: 1 1 auto; overflow-y: auto; min-height: 0;
+  flex: 1 1 auto !important; overflow-y: auto; min-height: 0;
   display: flex; flex-direction: column; gap: 5px;
   margin: 0; padding: 0 2px 0 0; list-style: none; counter-reset: up;
 }
