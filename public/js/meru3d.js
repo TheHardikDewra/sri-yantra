@@ -134,8 +134,18 @@ export function mount(canvas, url) {
     // sit the base on the ground plane and centre it horizontally
     geo.translate(-c.x, -bb.min.y, -c.z);
 
+    // The crease lines sit exactly on the surface they trace. Seen from an
+    // angle that is fine, but looking straight down they are coplanar with the
+    // terrace tops and z-fighting swallows them, which is precisely the view
+    // where they carry the whole read. Push the solid back a hair so the lines
+    // always win.
     mesh.material = new THREE.MeshStandardMaterial(
-      Object.assign({ flatShading: true }, MATERIALS.gold));
+      Object.assign({
+        flatShading: true,
+        polygonOffset: true,
+        polygonOffsetFactor: 1,
+        polygonOffsetUnits: 1,
+      }, MATERIALS.gold));
     scene.add(mesh);
     state.mesh = mesh;
 
