@@ -229,8 +229,12 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
 #verify .ok { color: var(--e3); }
 #verify .no { color: var(--accent); }
 
+/* Nine tiers and six downloads. Auto-fill picks the column count from the
+   available width and leaves a stranded card on the last row - 4+4+1 for the
+   tiers, 4+2 for the downloads. Both counts have a factor of three, so three
+   columns divides them evenly; below that, one. */
 .tiers {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px; margin: 0; padding: 0; list-style: none; counter-reset: tier;
 }
 .tiers li {
@@ -305,7 +309,7 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
 
 /* ------------------------------------------------------------ downloads */
 
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .card {
   display: block; padding: 18px; text-decoration: none;
   border: 1px solid var(--rule); border-radius: 12px; background: var(--paper);
@@ -336,6 +340,9 @@ footer a { color: var(--ink-2); }
   .cols { grid-template-columns: 1fr; gap: 32px; }
   .topbar nav { gap: 14px; }
   .topbar nav a:nth-child(3) { display: none; }
+}
+@media (max-width: 760px) {
+  .tiers, .cards { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {
   .band { padding: 52px 0; }
