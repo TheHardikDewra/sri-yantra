@@ -170,6 +170,12 @@ async function startMeru() {
         $('#puja-caption').textContent = 'could not start: ' + err.message;
       });
     });
+    // a failed mesh fetch fires no ready event; say so instead of spinning
+    $('#gl').addEventListener('meru:error', e => {
+      $('#loading').classList.remove('done');
+      $('#loading').textContent =
+        'could not load the 3D view: ' + (e.detail?.message || 'network error');
+    });
     $$('#material button').forEach(b => b.addEventListener('click', () => {
       $$('#material button').forEach(x => x.classList.toggle('on', x === b));
       meru.setMaterial(b.dataset.mat);
@@ -201,7 +207,13 @@ async function startPuja() {
   list.replaceChildren(...UPACHARAS.map((u, i) => {
     const li = document.createElement('li');
     li.innerHTML = `<span><b>${u.n}</b><em>${u.e}</em></span>`;
-    li.addEventListener('click', () => { puja.pause(); puja.go(i); sync(); });
+    li.tabIndex = 0;
+    li.setAttribute('role', 'button');
+    const pick = () => { puja.pause(); puja.go(i); sync(); };
+    li.addEventListener('click', pick);
+    li.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+    });
     return li;
   }));
 

@@ -122,25 +122,63 @@ export function createPuja(meru) {
 
   // How high is the mountain under (x, z)? The solver already knows exactly -
   // the solid is these outlines at these heights - so it ships the profile and
-  // this reads it. Raycasting a 59,200-facet mesh a few hundred times a frame
-  // would freeze the tab, and it would only be rediscovering this.
+  // this reads it. Raycasting the mesh a few hundred times a frame would
+  // freeze the tab, and it would only be rediscovering this.
   //
-  // Nearest angle rather than interpolated: the Meru is a staircase, and the
-  // steps should stay steps.
+  // Two conversions matter here. The profile is in the solver's plan
+  // coordinates, and the GLB's z-up to y-up flip maps a plan point (x, y) to
+  // world (x, -y) in xz - so a world bearing is MINUS the plan bearing. And
+  // the angle list is deliberately NOT uniform (it is densified at the
+  // figure's corners so the ridges stay sharp), so it is searched, never
+  // indexed by proportion. Nearest angle rather than interpolated: the Meru
+  // is a staircase, and the steps should stay steps.
   const prof = meru.profile;
-  const NA = prof ? prof.angles.length : 0;
-  const bearing = (x, z) => {
-    let a = Math.atan2(z, x);
-    if (a < 0) a += Math.PI * 2;
-    return Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
+  const ANG = prof ? prof.angles : null;
+  const NA = ANG ? ANG.length : 0;
+  const TAU = Math.PI * 2;
+
+  function planIndex(aPlan) {
+    let a = aPlan % TAU;
+    if (a < 0) a += TAU;
+    let lo = 0, hi = NA - 1;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (ANG[mid] < a) lo = mid + 1; else hi = mid;
+    }
+    let best = lo, bd = Infinity;
+    for (const i of [(lo - 1 + NA) % NA, lo % NA, (lo + 1) % NA]) {
+      let d = Math.abs(ANG[i] - a);
+      d = Math.min(d, TAU - d);
+      if (d < bd) { bd = d; best = i; }
+    }
+    return best;
+  }
+
+  const inPoly = (pts, x, y) => {
+    let c = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const [x1, y1] = pts[i], [x2, y2] = pts[j];
+      if ((y1 > y) !== (y2 > y) && x < (x2 - x1) * (y - y1) / (y2 - y1) + x1)
+        c = !c;
+    }
+    return c;
   };
 
-  // Height of the solid under a point.
+  // Height of the solid under a point: the mountain tiers by radius, then
+  // the bhupura by real polygon containment - the gated square is not a
+  // circle, and treating it as one is how offerings ended up floating over
+  // the gate notches.
   function ground(x, z) {
     if (!prof) return 0;
-    const r = Math.hypot(x, z), ai = bearing(x, z);
+    const r = Math.hypot(x, z), ai = planIndex(Math.atan2(-z, x));
     for (let i = prof.tiers.length - 1; i >= 0; i--) {
       if (r <= prof.tiers[i].r[ai]) return prof.tiers[i].z;
+    }
+    const B = prof.bhupura;
+    if (B) {
+      for (let k = B.outlines.length - 1; k >= 0; k--) {
+        if (inPoly(B.outlines[k], x, -z)) return B.z[k];
+      }
     }
     return 0;
   }
@@ -150,9 +188,7 @@ export function createPuja(meru) {
   // straight through it, which is what was happening.
   function radiusAt(y, theta) {
     if (!prof) return 0;
-    let a = theta % (Math.PI * 2);
-    if (a < 0) a += Math.PI * 2;
-    const ai = Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
+    const ai = planIndex(-theta);
     for (let i = 0; i < prof.tiers.length; i++) {
       if (prof.tiers[i].z >= y) return prof.tiers[i].r[ai];
     }
@@ -167,10 +203,18 @@ export function createPuja(meru) {
     return obj;
   };
 
+  // Acts may schedule camera moves for later; those must die with the act,
+  // or jumping to the next one lets the old act steer the camera through it.
+  const timers = [];
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+
   function clear() {
+    while (timers.length) clearTimeout(timers.pop());
+    meru.cancelBow?.();
     for (const r of live) {
       group.remove(r.obj);
       r.obj.traverse?.(o => {
+        if (o.isInstancedMesh) o.dispose();
         if (o.geometry && !Object.values(geo).includes(o.geometry)) o.geometry.dispose();
         if (o.material) [].concat(o.material).forEach(m => m.dispose());
       });
@@ -221,7 +265,24 @@ export function createPuja(meru) {
   // Water: drops stretch as they gather speed; once they strike the mountain
   // they stop falling and start running outward and down over the terraces,
   // following the surface, until they leave the base and are sent up again.
+  //
+  // The pour has to happen where the mountain is LOWER than the pour height.
+  // Near the axis the summit stands at 2.27; a drop "poured" at 0.5 there
+  // would materialise inside the rock and pop to a terrace above - which is
+  // exactly what Padya used to do. So the spawn radius starts beyond the
+  // outermost tier that still stands at the pour height: Padya's water falls
+  // in a ring at the feet, Snana's from above the summit, each by the same
+  // rule.
   function water(fromY, count, spread = 0.10, flow = 0.62) {
+    let rIn = 0;
+    if (prof) {
+      for (const t of prof.tiers) {
+        if (t.z >= fromY) for (const r of t.r) if (r > rIn) rIn = r;
+      }
+      if (rIn) rIn = Math.min(rIn * 1.02, R);
+    }
+    const fallR = () => rIn ? rnd(rIn, Math.min(R * 1.04, rIn + R * spread))
+                            : rnd(0, R * spread);
     const s = swarm(geo.drop, [C.water], count,
       () => {
         // Start them scattered through the cycle. Spawned together they fall
@@ -229,11 +290,13 @@ export function createPuja(meru) {
         // clump pulsing rather than a stream running.
         const a = rnd(0, Math.PI * 2);
         const running = Math.random() < 0.62;
-        const r = running ? rnd(R * spread, R * 1.05) : rnd(0, R * spread);
+        const r = running ? rnd(Math.max(rIn, R * spread), R * 1.05) : fallR();
         const x = Math.cos(a) * r, z = Math.sin(a) * r;
+        const g = ground(x, z);
         return { a, r, x, z,
-                 y: running ? ground(x, z) + R * 0.010
-                            : rnd(ground(x, z) + R * 0.02, fromY + H * 0.12),
+                 y: running ? g + R * 0.010
+                            : rnd(g + R * 0.02,
+                                  Math.max(fromY + H * 0.12, g + R * 0.02 + H * 0.05)),
                  v: running ? 0 : rnd(0, 1.2),
                  sx: R * 0.015, sy: R * 0.028, sz: R * 0.015, run: running };
       },
@@ -249,8 +312,11 @@ export function createPuja(meru) {
           b.sy = R * 0.024;
           if (b.r > R * 1.12) {
             b.a = rnd(0, Math.PI * 2);
-            b.r = rnd(0, R * spread);
-            b.y = fromY + rnd(0, H * 0.12);
+            b.r = fallR();
+            b.x = Math.cos(b.a) * b.r;
+            b.z = Math.sin(b.a) * b.r;
+            b.y = Math.max(fromY + rnd(0, H * 0.12),
+                           ground(b.x, b.z) + R * 0.03);
             b.v = 0; b.run = false; b.sy = R * 0.028;
           }
         } else {
@@ -291,22 +357,49 @@ export function createPuja(meru) {
     } },
 
     { view: [0, 0.66, 1.30], hold: 3.2, run() {             // 2 Asana
-      // A lotus seat laid round the base. It has to sit ON the bhupura, not
-      // at a radius picked by eye - the gated square reaches 1.80 along the
-      // axes and 2.07 into the corners, so anything fixed floats off one and
-      // sinks into the other. ground() puts every petal on the terrace.
-      const n = 32;
+      // A lotus seat laid round the base. The bhupura is a gated square, not
+      // a circle - a ring at any fixed radius crosses its gate openings and
+      // corner fields - so the seat follows the outermost tread itself: the
+      // centreline between the first two outlines, which by construction
+      // lies flat on the first step.
+      const B = prof && prof.bhupura;
+      const path = [];
+      if (B) {
+        const o0 = B.outlines[0], o1 = B.outlines[1];
+        for (let i = 0; i < o0.length; i++) {
+          const px = (o0[i][0] + o1[i][0]) / 2;
+          const py = (o0[i][1] + o1[i][1]) / 2;
+          path.push(new THREE.Vector3(px, B.z[0] + R * 0.008, -py));
+        }
+      } else {
+        for (let i = 0; i < 64; i++) {
+          const a = (i / 64) * Math.PI * 2, r = R * 0.88;
+          const x = Math.cos(a) * r, z = Math.sin(a) * r;
+          path.push(new THREE.Vector3(x, ground(x, z) + R * 0.008, z));
+        }
+      }
+      const lens = [0];
+      for (let i = 1; i <= path.length; i++)
+        lens.push(lens[i - 1] + path[i - 1].distanceTo(path[i % path.length]));
+      const total = lens[lens.length - 1];
+      const at = d => {
+        let i = 1;
+        while (i < lens.length - 1 && lens[i] < d) i++;
+        const p0 = path[i - 1], p1 = path[i % path.length];
+        const k = (d - lens[i - 1]) / (lens[i] - lens[i - 1] || 1);
+        return p0.clone().lerp(p1, k);
+      };
+      const n = 48;
       const s1 = swarm(geo.petal, [BLOOM[0], BLOOM[3], BLOOM[2]], n,
         i => {
-          const a = (i / n) * Math.PI * 2;
-          const r = R * 0.88;
-          const x = Math.cos(a) * r, z = Math.sin(a) * r;
-          return { a, x, z, y: ground(x, z) + R * 0.008,
+          const p = at((i / n) * total);
+          const a = Math.atan2(p.z, p.x);       // petals face out from the axis
+          return { x: p.x, z: p.z, y: p.y,
                    rx: -Math.PI / 2, ry: 0, rz: -a - Math.PI / 2,
-                   s: 0.001, full: R * 0.30, i };
+                   s: 0.001, full: R * 0.26, i };
         },
         (b, dt, age) => {
-          b.s = b.full * ease(Math.min(1, Math.max(0, age - b.i * 0.025) / 0.5));
+          b.s = b.full * ease(Math.min(1, Math.max(0, age - b.i * 0.02) / 0.5));
         });
       add(s1.holder, (dt, age) => s1.tick(dt, age));
 
@@ -314,8 +407,9 @@ export function createPuja(meru) {
       lit.position.set(0, H * 0.75, 0);
       add(lit, (dt, age) => { lit.intensity = 8 * Math.min(1, age / 0.6); });
 
-      const seat = ring(R * 0.88, 0, C.sandal, R * 0.014);
-      seat.position.y = ground(R * 0.88, 0) + R * 0.004;
+      const seat = new THREE.Mesh(
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path, true), 360,
+          R * 0.012, 6, true), matt(C.sandal, 1, 0.5));
       seat.scale.setScalar(0.01);
       add(seat, (dt, age) => seat.scale.setScalar(ease(Math.min(1, age / 0.8))));
     } },
@@ -361,14 +455,14 @@ export function createPuja(meru) {
       const NAv = 160, NH = 40;
       const y0 = H * 0.14, y1 = H * 0.62, off = R * 0.045;
       const pos = [], idx = [];
+      // the hem rows tuck in close to the surface so the edge reads wrapped
+      const hem = off * 0.14;
       for (let j2 = 0; j2 < NH; j2++) {
         const v = j2 / (NH - 1);
         const y = y0 + v * (y1 - y0);
-        // hem the top and bottom in a little so it reads as a wrapped edge
-        const hem = off * (0.35 + 0.65 * Math.sin(Math.PI * Math.min(1, v * 3)) );
         for (let i2 = 0; i2 < NAv; i2++) {
           const a = (i2 / NAv) * Math.PI * 2;
-          const rad = radiusAt(y, a) + (j2 === 0 || j2 === NH - 1 ? hem * 0.4 : off);
+          const rad = radiusAt(y, a) + (j2 === 0 || j2 === NH - 1 ? hem : off);
           pos.push(Math.cos(a) * rad, y, Math.sin(a) * rad);
         }
       }
@@ -694,7 +788,7 @@ export function createPuja(meru) {
       floor.position.y = -0.002;
       add(floor, () => {});
       // walked at eye level, where passing the lamps reads as walking
-      setTimeout(() => meru.circumambulate(9200, 1.38, 1.02), 700);
+      later(() => meru.circumambulate(9200, 1.38, 1.02), 700);
     } },
 
     { view: null, hold: 4.0, run() { meru.bow(3400); } },              // 16

@@ -182,7 +182,7 @@ export function mount(canvas, url) {
     canvas.dispatchEvent(new CustomEvent('meru:ready', { bubbles: true }));
 
     // The crease lines cost far more than everything else here: finding which
-    // of 59,200 facets meet at a real corner takes tens of seconds, and doing
+    // of ~54,000 facets meet at a real corner takes tens of seconds, and doing
     // it before the first frame leaves the viewer staring at a blank box. Show
     // the mountain first, then add the lines a couple of frames later.
     requestAnimationFrame(() => requestAnimationFrame(() => {
@@ -197,6 +197,10 @@ export function mount(canvas, url) {
       scene.add(edges);
       state.edges = edges;
     }));
+  }, undefined, err => {
+    // without this the loader text sits at "building the mountain" forever
+    canvas.dispatchEvent(new CustomEvent('meru:error',
+      { bubbles: true, detail: err }));
   });
 
   function resize() {
@@ -305,12 +309,16 @@ export function mount(canvas, url) {
             phi === null ? s0.phi : phi,
             mul === null ? s0.radius : state.home.radius * mul, ms, false);
   };
-  // Namaskara: down to the ground and back up.
+  // Namaskara: down to the ground and back up. The return glide is armed on
+  // a timer, so it can be cancelled if the act is left before it fires.
+  let bowTimer = null;
   state.bow = (ms = 3400) => {
     const s0 = here();
     glideTo(s0.theta, controls.maxPolarAngle, s0.radius, ms / 2);
-    setTimeout(() => glideTo(state.home.theta, state.home.phi,
-                             state.home.radius, ms / 2), ms / 2);
+    clearTimeout(bowTimer);
+    bowTimer = setTimeout(() => glideTo(state.home.theta, state.home.phi,
+                                        state.home.radius, ms / 2), ms / 2);
   };
+  state.cancelBow = () => clearTimeout(bowTimer);
   return state;
 }
