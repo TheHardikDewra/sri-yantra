@@ -147,7 +147,7 @@ export function mount(canvas, url) {
     controls.target.set(0, size.y * 0.38, 0);
     state.home = new THREE.Spherical(reach * 3.05, Math.PI * 0.335, 0);
     controls.minDistance = state.home.radius * 0.45;
-    controls.maxDistance = state.home.radius * 2.10;
+    controls.maxDistance = state.home.radius * 2.10;   // room for the plan view
     place(state.home);
     controls.update();
     state.ready = true;
@@ -164,7 +164,7 @@ export function mount(canvas, url) {
         new THREE.LineBasicMaterial({
           color: state.material === 'ink' ? 0xbbb1a0 : 0x000000,
           transparent: true,
-          opacity: state.material === 'ink' ? 0.35 : 0.30,
+          opacity: state.material === 'ink' ? 0.45 : 0.42,
         }));
       edges.visible = state.edgesWanted !== false;
       scene.add(edges);
@@ -209,7 +209,7 @@ export function mount(canvas, url) {
     if (!state.edges) return;
     state.edges.material.color = new THREE.Color(
       name === 'ink' ? 0xbbb1a0 : 0x000000);
-    state.edges.material.opacity = name === 'ink' ? 0.35 : 0.30;
+    state.edges.material.opacity = name === 'ink' ? 0.45 : 0.42;
   };
   state.setWireframe = on => {
     if (state.mesh) state.mesh.material.wireframe = on;
@@ -227,8 +227,12 @@ export function mount(canvas, url) {
   // yantra the way the flat figure is read.
   state.view = which => {
     if (!state.home) return;
-    const phi = which === 'top' ? TOP_PHI : state.home.phi;
-    glideTo(state.home.theta, phi, state.home.radius, 750);
+    const top = which === 'top';
+    // Seen from above the footprint is square and the framing that suits the
+    // three-quarter view crops it, so the plan view stands further back.
+    glideTo(state.home.theta,
+            top ? TOP_PHI : state.home.phi,
+            state.home.radius * (top ? 1.42 : 1), 750);
   };
   state.reset = () => state.view('front');
   state.squareUp = squareUp;
