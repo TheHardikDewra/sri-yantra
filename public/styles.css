@@ -245,6 +245,50 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
 .tiers li b { display: block; font-weight: 600; }
 .tiers li em { font-style: normal; color: var(--ink-2); }
 
+/* The sixteen sit beside the canvas, never below it: the whole point is to
+   watch the offering happen while choosing it. */
+/* Both columns are pinned to one height. Left to itself the panel's sixteen
+   entries set the row height and stretch the canvas into a tall column, which
+   crops the mountain; the list scrolls inside instead. */
+.meru-layout {
+  display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 16px;
+  --meru-h: 560px;
+}
+.meru-layout .stage {
+  max-width: none; aspect-ratio: auto; height: var(--meru-h);
+  border: 1px solid var(--rule); border-radius: 12px;
+}
+.puja {
+  display: flex; flex-direction: column; min-height: 0; height: var(--meru-h);
+  border: 1px solid var(--rule); border-radius: 12px; padding: 16px;
+}
+.puja h3 { display: flex; align-items: center; margin: 0 0 8px; }
+.puja .fine { margin: 0 0 14px; }
+.puja .segmented { margin-bottom: 10px; }
+.puja .segmented button { flex: 1; padding: 7px 4px; font-size: 12.5px; }
+.puja .hint { margin: 0 0 12px; min-height: 2.4em; }
+
+.upacharas {
+  flex: 1 1 auto; overflow-y: auto; min-height: 0;
+  display: flex; flex-direction: column; gap: 5px;
+  margin: 0; padding: 0 2px 0 0; list-style: none; counter-reset: up;
+}
+.upacharas li {
+  display: flex; gap: 9px; align-items: baseline; cursor: pointer;
+  padding: 7px 10px; border: 1px solid var(--rule); border-radius: 8px;
+  font-size: 12.5px; counter-increment: up;
+}
+.upacharas li::before {
+  content: counter(up); font-family: var(--mono); font-size: 10.5px;
+  color: var(--ink-2); min-width: 1.2em;
+}
+.upacharas li:hover { border-color: var(--ink-2); }
+.upacharas li.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.upacharas li.on::before, .upacharas li.on em { color: var(--paper); opacity: .7; }
+.upacharas b { font-weight: 600; }
+.upacharas em { font-style: normal; color: var(--ink-2); display: block;
+  font-size: 12px; margin-top: 1px; }
+
 /* ---------------------------------------------------------------- prose */
 
 .band p { margin: 0 0 16px; color: var(--ink-2); }
@@ -279,6 +323,10 @@ footer a { color: var(--ink-2); }
 /* --------------------------------------------------------------- narrow */
 
 @media (max-width: 900px) {
+  .meru-layout { grid-template-columns: 1fr; --meru-h: auto; }
+  .meru-layout .stage { height: auto; aspect-ratio: 4 / 3; }
+  .puja { height: auto; }
+  .upacharas { max-height: 280px; }
   .hero { grid-template-columns: 1fr; gap: 32px; padding: 44px 24px 60px; }
   .hero-art { order: 2; }
   .cols { grid-template-columns: 1fr; gap: 32px; }

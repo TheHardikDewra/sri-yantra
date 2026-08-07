@@ -142,11 +142,26 @@
     terrace outline is measured off the solved figure, not modelled by hand —
     which is why the star-shaped ledges are exactly the triangle enclosures.</p>
 
-    <div class="stage-wrap tall">
+    <div class="meru-layout">
       <div class="stage dark" id="stage3d">
         <canvas id="gl"></canvas>
         <div class="loading" id="loading">building the mountain…</div>
       </div>
+
+      <aside class="puja">
+        <h3><svg class="i" aria-hidden="true"><use href="#i-flower-lotus"/></svg>Ṣoḍaśopacāra</h3>
+        <p class="fine">The sixteen services, performed on the mountain. Pick
+        one, or let it run. The names and the acts are here; the mantras that
+        accompany them are not.</p>
+        <div class="segmented" id="puja-run">
+          <button id="puja-play" type="button">Begin</button>
+          <button id="puja-prev" type="button">Back</button>
+          <button id="puja-next" type="button">Next</button>
+          <button id="puja-stop" type="button">End</button>
+        </div>
+        <p class="hint" id="puja-caption">Not begun.</p>
+        <ol class="upacharas" id="upacharas"></ol>
+      </aside>
     </div>
 
     <div class="toolbar">

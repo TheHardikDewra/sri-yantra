@@ -123,7 +123,10 @@ export function mount(canvas, url) {
     glideTo(theta, s.phi, s.radius);
   }
 
-  canvas.addEventListener('pointerdown', () => { state.glide = null; });
+  canvas.addEventListener('pointerdown', () => {
+    state.glide = null;
+    state.touched = true;      // stop reframing once they have taken the wheel
+  });
 
   new GLTFLoader().load(url, gltf => {
     const mesh = gltf.scene.getObjectByProperty('type', 'Mesh');
@@ -155,9 +158,17 @@ export function mount(canvas, url) {
     const size = bb.getSize(new THREE.Vector3());
     const reach = Math.max(size.x, size.z) * 0.5;
     controls.target.set(0, size.y * 0.38, 0);
-    state.home = new THREE.Spherical(reach * 3.05, Math.PI * 0.335, 0);
-    controls.minDistance = state.home.radius * 0.45;
-    controls.maxDistance = state.home.radius * 2.10;   // room for the plan view
+
+    // Distance has to come from the viewport, not a constant: the field of
+    // view is vertical, so a tall narrow canvas crops the mountain sideways
+    // while a wide one leaves it swimming. Fit both axes and take the looser.
+    state.fit = () => {
+      const t = Math.tan((camera.fov * Math.PI / 180) / 2);
+      const dV = size.y * 0.60 / t;
+      const dH = reach * 1.08 / (t * Math.max(0.2, camera.aspect));
+      return Math.max(dV, dH) * 1.16;
+    };
+    state.home = new THREE.Spherical(state.fit(), Math.PI * 0.335, 0);
     place(state.home);
     controls.update();
     state.ready = true;
@@ -189,6 +200,13 @@ export function mount(canvas, url) {
       renderer.setSize(w, h, false);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      if (state.fit) {
+        state.home.radius = state.fit();
+        controls.minDistance = state.home.radius * 0.45;
+        controls.maxDistance = state.home.radius * 2.10;
+        // reframe only while the viewer has left the camera alone
+        if (!state.touched && !state.glide) place(state.home);
+      }
     }
   }
 
@@ -205,6 +223,7 @@ export function mount(canvas, url) {
         g.from.theta + (g.to.theta - g.from.theta) * e));
       if (k >= 1) state.glide = null;
     }
+    state.puja?.tick();
     controls.update();
     renderer.render(scene, camera);
   })();
@@ -237,6 +256,7 @@ export function mount(canvas, url) {
   // yantra the way the flat figure is read.
   state.view = which => {
     if (!state.home) return;
+    state.touched = false;
     const top = which === 'top';
     // Seen from above the footprint is square and the framing that suits the
     // three-quarter view crops it, so the plan view stands further back.
@@ -246,5 +266,20 @@ export function mount(canvas, url) {
   };
   state.reset = () => state.view('front');
   state.squareUp = squareUp;
+
+  // Pradakshina: one full turn, kept to the right. Clockwise seen from above
+  // means the figure stays on the walker's right, which is the whole point of
+  // the rite, so the azimuth decreases.
+  state.circumambulate = (ms = 9000) => {
+    const s0 = here();
+    glideTo(s0.theta - 2 * Math.PI, s0.phi, s0.radius, ms);
+  };
+  // Namaskara: down to the ground and back up.
+  state.bow = (ms = 3400) => {
+    const s0 = here();
+    glideTo(s0.theta, controls.maxPolarAngle, s0.radius, ms / 2);
+    setTimeout(() => glideTo(state.home.theta, state.home.phi,
+                             state.home.radius, ms / 2), ms / 2);
+  };
   return state;
 }

@@ -122,10 +122,16 @@ async function startMeru() {
   try {
     const { mount } = await import('./meru3d.js');
     meru = mount($('#gl'), './data/maha-meru.glb');
+    // mount() returns before the mesh arrives, so anything that needs the
+    // geometry - the puja does, it sizes every offering to the mountain - has
+    // to wait for this.
     $('#gl').addEventListener('meru:ready', () => {
       $('#loading').classList.add('done');
       meru.setSpin($('#c-spin').checked);
       meru.setEdges($('#c-edge').checked);
+      startPuja().catch(err => {
+        $('#puja-caption').textContent = 'could not start: ' + err.message;
+      });
     });
     $$('#material button').forEach(b => b.addEventListener('click', () => {
       $$('#material button').forEach(x => x.classList.toggle('on', x === b));
@@ -144,13 +150,78 @@ async function startMeru() {
   }
 }
 
-// only build the mountain once it is about to be looked at
-new IntersectionObserver((entries, obs) => {
-  if (entries.some(e => e.isIntersecting)) {
-    obs.disconnect();
-    startMeru();
+// ---------------------------------------------------------- the sixteen
+
+async function startPuja() {
+  const { createPuja, UPACHARAS } = await import('./puja.js');
+  const puja = createPuja(meru);
+  meru.puja = puja;                       // the render loop drives it
+
+  const list = $('#upacharas');
+  list.replaceChildren(...UPACHARAS.map((u, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span><b>${u.n}</b><em>${u.e}</em></span>`;
+    li.addEventListener('click', () => { puja.pause(); puja.go(i); sync(); });
+    return li;
+  }));
+
+  const caption = $('#puja-caption');
+  function sync() {
+    const i = puja.step;
+    [...list.children].forEach((li, k) => li.classList.toggle('on', k === i));
+    caption.textContent = i < 0
+      ? 'Not begun.'
+      : `${i + 1} of 16 · ${UPACHARAS[i].n} — ${UPACHARAS[i].e}`;
+    $('#puja-play').textContent = puja.playing ? 'Pause' : (i < 0 ? 'Begin' : 'Resume');
+    if (i >= 0) list.children[i].scrollIntoView({ block: 'nearest' });
   }
-}, { rootMargin: '300px' }).observe($('#stage3d'));
+  meru.onPujaStep = sync;
+  meru.onPujaEnd = sync;
+
+  $('#puja-play').addEventListener('click', () => {
+    puja.playing ? puja.pause() : puja.play();
+    sync();
+  });
+  $('#puja-next').addEventListener('click', () => { puja.pause(); puja.next(); sync(); });
+  $('#puja-prev').addEventListener('click', () => { puja.pause(); puja.prev(); sync(); });
+  $('#puja-stop').addEventListener('click', () => { puja.stop(); meru.view('front'); sync(); });
+  sync();
+}
+
+// Build the mountain once it is about to be looked at - but never make that
+// the only way it can happen. IntersectionObserver is an optimisation, not a
+// guarantee: it goes quiet in throttled or occluded tabs, and when it does the
+// 3D view simply never loads. So the rect is also checked directly, on scroll
+// and resize, and there is a timer behind both.
+function whenNear(el, fn, margin = 300) {
+  let done = false;
+  const fire = () => {
+    if (done) return;
+    done = true;
+    removeEventListener('scroll', check);
+    removeEventListener('resize', check);
+    clearInterval(timer);
+    io?.disconnect();
+    fn();
+  };
+  const check = () => {
+    const r = el.getBoundingClientRect();
+    if (r.top < innerHeight + margin && r.bottom > -margin) fire();
+  };
+  let io = null;
+  if ('IntersectionObserver' in window) {
+    io = new IntersectionObserver(es => {
+      if (es.some(e => e.isIntersecting)) fire();
+    }, { rootMargin: margin + 'px' });
+    io.observe(el);
+  }
+  addEventListener('scroll', check, { passive: true });
+  addEventListener('resize', check, { passive: true });
+  const timer = setInterval(check, 400);
+  check();
+}
+
+whenNear($('#stage3d'), startMeru);
 
 // -------------------------------------------------------------------- boot
 
