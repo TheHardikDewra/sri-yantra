@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Śrī Yantra — solved exactly</title>
+<meta name="description" content="The Sri Yantra with every concurrency condition satisfied to 60 significant digits, drawn flat and raised into the Maha Meru. Free SVG, PNG, GLB and STL.">
+<meta property="og:title" content="Śrī Yantra — solved exactly">
+<meta property="og:description" content="Nine triangles, 49 conditions, worst residual 1e-61. The flat figure and the 3D Mahā Meru, free to download.">
+<meta name="theme-color" content="#f7f3ec">
+<link rel="stylesheet" href="./styles.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🔺</text></svg>">
+<script type="importmap">
+{"imports":{"three":"./js/three/build/three.module.min.js","three/addons/":"./js/three/examples/jsm/"}}
+</script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top">
+    <span class="mark" aria-hidden="true"></span>
+    <span>Śrī&nbsp;Yantra</span>
+  </a>
+  <nav>
+    <a href="#figure">The figure</a>
+    <a href="#meru">Mahā Meru</a>
+    <a href="#maths">The maths</a>
+    <a href="#get">Download</a>
+  </nav>
+</header>
+
+<!-- ==================================================== hero -->
+<section class="hero" id="top">
+  <div class="hero-art"><div id="hero2d"></div></div>
+  <div class="hero-text">
+    <p class="eyebrow">Nine triangles · 43 cells · 49 conditions</p>
+    <h1>The Śrī Yantra,<br>solved exactly.</h1>
+    <p class="sub">Almost every Śrī Yantra in circulation — printed, cast or
+    tattooed — is subtly wrong. Where three lines should cross at one point,
+    they miss. Here the whole figure is solved from its defining conditions in
+    60-digit arithmetic, and the worst error anywhere in it is
+    <b id="hero-res">—</b>.</p>
+    <div class="hero-cta">
+      <a class="btn primary" href="#figure">See the figure</a>
+      <a class="btn" href="#get">Download</a>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== flat -->
+<section class="band" id="figure">
+  <div class="wrap">
+    <p class="eyebrow">Bhū-prastāra · the flat figure</p>
+    <h2>Every crossing lands where it should</h2>
+    <p class="intro">Nine isosceles triangles share one vertical axis: five
+    point down, four point up. The conditions that make the figure a Śrī Yantra
+    are all about coincidence — apexes that must land on other triangles'
+    bases, and triples of lines that must meet at one point rather than three.
+    Solving them is a non-linear system with no ruler-and-compass shortcut.</p>
+
+    <div class="stage-wrap">
+      <div class="stage" id="stage2d"></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tool">
+        <span class="tool-label">Colour</span>
+        <div class="segmented" id="palette">
+          <button data-pal="ink" class="on">Ink</button>
+          <button data-pal="traditional">Traditional</button>
+        </div>
+      </div>
+      <div class="tool">
+        <span class="tool-label">Parameters</span>
+        <select id="variant">
+          <option value="huet">Huet's canonical figure</option>
+          <option value="traditional">Traditional 48-unit</option>
+        </select>
+      </div>
+      <div class="tool grow">
+        <span class="tool-label">Draw</span>
+        <div class="pills">
+          <label><input type="checkbox" id="c-fill" checked><span>43 triangles</span></label>
+          <label><input type="checkbox" id="c-nine" checked><span>Nine triangles</span></label>
+          <label><input type="checkbox" id="c-outer" checked><span>Lotuses &amp; bhūpura</span></label>
+          <label><input type="checkbox" id="c-marma"><span>Crossings</span></label>
+          <label><input type="checkbox" id="c-label"><span>Labels</span></label>
+        </div>
+      </div>
+    </div>
+
+    <div class="cols">
+      <div>
+        <h3>The five enclosures</h3>
+        <ul class="legend" id="legend"></ul>
+        <p class="fine">Tradition counts 43 triangles in five enclosures. The
+        nine triangles actually cut the figure into 74 regions — the 43 are the
+        ones an <b>odd</b> number of triangles covers. Under that rule every
+        survivor is a triangle and the counts fall out exactly.</p>
+      </div>
+      <div>
+        <h3>Solved coordinates</h3>
+        <div class="tablewrap"><table id="coords">
+          <thead><tr><th>i</th><th>base y</th><th>half-width</th><th>apex y</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <p class="fine">In units of the radius of circle E, which circumscribes
+        t₃ and t₇. Origin at its centre, y upwards. The JSON carries 40
+        significant digits.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================================================== meru -->
+<section class="band alt" id="meru">
+  <div class="wrap">
+    <p class="eyebrow">Mahā Meru · the mountain</p>
+    <h2>The same figure, raised</h2>
+    <p class="intro">Give each of the nine enclosures its own terrace and the
+    diagram becomes a stepped mountain with the bindu at the summit. Every
+    terrace outline is measured off the solved figure, not modelled by hand —
+    which is why the star-shaped ledges are exactly the triangle enclosures.</p>
+
+    <div class="stage-wrap tall">
+      <div class="stage dark" id="stage3d">
+        <canvas id="gl"></canvas>
+        <div class="loading" id="loading">building the mountain…</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="tool">
+        <span class="tool-label">Surface</span>
+        <div class="segmented" id="material">
+          <button data-mat="gold" class="on">Gold</button>
+          <button data-mat="brass">Brass</button>
+          <button data-mat="stone">Stone</button>
+          <button data-mat="ink">Ink</button>
+        </div>
+      </div>
+      <div class="tool grow">
+        <span class="tool-label">View</span>
+        <div class="pills">
+          <label><input type="checkbox" id="c-spin"><span>Turn slowly</span></label>
+          <label><input type="checkbox" id="c-edge" checked><span>Terrace edges</span></label>
+          <label><input type="checkbox" id="c-wire"><span>Wireframe</span></label>
+        </div>
+        <button class="ghost" id="c-reset" type="button">Reset view</button>
+      </div>
+      <p class="hint">Drag to orbit · ctrl/⌘ + scroll to zoom · right-drag to pan.
+      The view is clamped above the horizon: an inverted Śrī Yantra is a
+      different figure, so the Meru only stands the way it is meant to.</p>
+    </div>
+
+    <h3>Nine tiers, base to summit</h3>
+    <ol class="tiers" id="tiers"></ol>
+  </div>
+</section>
+
+<!-- ==================================================== maths -->
+<section class="band" id="maths">
+  <div class="wrap narrow">
+    <p class="eyebrow">The maths</p>
+    <h2>What “geometrically perfect” means here</h2>
+
+    <p>Number the triangles t₁…t₉ by the height of their base, top down; t₁…t₅
+    point down, t₆…t₉ point up. Each is fixed by three numbers: the height of
+    its base, the half-width of that base, and the height of its apex. The
+    conditions, following Chiodo (2021):</p>
+
+    <ol class="conds">
+      <li><b>(i)</b> t₃ and t₇ share one circumscribed circle, E.</li>
+      <li><b>(ii)</b> The apex of one triangle is the midpoint of another's
+      base — for seven pairs: (t₁,t₆) (t₈,t₁) (t₆,t₂) (t₉,t₃) (t₅,t₇) (t₄,t₈)
+      (t₂,t₉).</li>
+      <li><b>(iii)</b> On each side of the axis, the leg of a downward
+      triangle, the leg of an upward triangle and the base of a third meet at a
+      single point — twelve times over.</li>
+    </ol>
+
+    <p>That is 22 independent equations in 27 unknowns. Fixing E as the unit
+    circle spends two of the five remaining freedoms, leaving four real
+    parameters: the base heights of t₃, t₆, t₇ and t₉. Choose those and every
+    other number in the figure is forced.</p>
+
+    <h3>A seventh pair in condition (ii)</h3>
+    <p>Chiodo's published list for (ii) has six pairs. With six, the system
+    keeps one degree of freedom too many and is <i>not</i> determined by his own
+    four parameters. The missing pair is <b>(t₁,t₆)</b> — and his construction
+    already relies on it: §2.3.2 fixes the leg of t₁ as “a ray <i>r</i> stemming
+    from Q”, and §2.2.2 defines Q as the base point of t₆. Add it and the count
+    comes out exactly as stated. With it, every apex except those of t₃ and t₇,
+    which sit on E, is the base point of another triangle.</p>
+
+    <h3>How it is solved</h3>
+    <p>Rather than throw 27 unknowns at a solver, the conditions are applied in
+    the order Chiodo's straightedge construction resolves them. Each step pins
+    one more quantity, and the chain consumes every condition but one:
+    ((iii); t₄,t₆,t₉). That leftover becomes a single scalar equation in a
+    single unknown — the height of t₁'s base — closed by a one-dimensional root
+    find at 60 digits.</p>
+
+    <h3>Checking it</h3>
+    <p>Every condition is then re-derived <i>from the final coordinates
+    alone</i>, never from the chain that produced them: each triple of lines
+    becomes a 3×3 determinant of normalised line equations, each circle
+    condition a distance. This table is that check, run fresh in the build.</p>
+    <div class="tablewrap"><table id="verify"><tbody></tbody></table></div>
+
+    <h3>Why 43 triangles, and what the other 31 regions are</h3>
+    <p>The nine triangles cut the figure into 74 regions, not 43. Fill them by
+    the <b>even-odd rule</b> — a region counts when an odd number of the nine
+    triangles covers it — and exactly 43 survive, every one of them a triangle,
+    with cover counts 9, 7, 5, 3, 1 giving the trikoṇa, aṣṭakoṇa, antardaśāra,
+    bahirdaśāra and caturdaśāra in turn. All 31 leftovers have an even cover
+    count and 21 of them are quadrilaterals — which are genuinely present in the
+    classical figure too, plainly visible at the far left and right of Chiodo's
+    own plate. This is why traditional Śrī Yantras are painted with alternating
+    filled and open cells.</p>
+
+    <h3>The enclosures outside the triangles</h3>
+    <p>Nothing in the concurrency conditions constrains the lotuses, the three
+    circles or the bhūpura. Those follow the traditional canon set out in
+    <i>Geometry of Srichakra</i>, which sizes everything against an inner-most
+    circle of diameter 108: the eight-petalled lotus at 127, the sixteen at 144,
+    the outer circle of the trivalaya at 108√2, and the bhūpura enclosed in a
+    circle of 224. Its twelve outer corners sit on the 30°, 45° and 60° lines;
+    each gate is a T whose neck meets the wall on the 15° and 75° lines.</p>
+
+    <h3>Sources</h3>
+    <ul class="refs">
+      <li>A. Chiodo, <i>On the construction of the Śrī Yantra</i>,
+        C. R. Math. Acad. Sci. Paris <b>359</b> (2021) 377–397.
+        <a href="https://doi.org/10.5802/crmath.163">doi:10.5802/crmath.163</a></li>
+      <li>G. Huet, <i>Śrī Yantra Geometry</i>, Theoretical Computer Science
+        <b>281</b> (2002) 609–628.</li>
+      <li>N. J. Bolton &amp; D. N. G. Macleod, <i>The geometry of the
+        Śrī-Yantra</i>, Religion <b>7</b> (1977) 66–85.</li>
+      <li>A. P. Kulaichev, <i>Śrīyantra and its mathematical properties</i>,
+        Indian Journal of History of Science <b>19</b> (1984) 279–292.</li>
+      <li>C. S. Rao, <i>Geometry of Srichakra</i> (Vagmi).</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ==================================================== downloads -->
+<section class="band alt" id="get">
+  <div class="wrap">
+    <p class="eyebrow">Download</p>
+    <h2>Take it with you</h2>
+    <p class="intro">Everything here is generated by the solver in this repo and
+    is free to use.</p>
+    <div class="cards">
+      <a class="card" id="dl-svg" download="sri-yantra.svg">
+        <b>SVG</b><span>The flat figure, vector, exactly as drawn above.</span>
+      </a>
+      <a class="card" id="dl-png" href="#">
+        <b>PNG</b><span>2400 × 2400 raster of the current settings.</span>
+      </a>
+      <a class="card" href="./data/maha-meru.glb" download>
+        <b>GLB</b><span>The Mahā Meru mesh, ready for any 3D tool.</span>
+      </a>
+      <a class="card" href="./data/maha-meru.stl" download>
+        <b>STL</b><span>Watertight and manifold — slices and prints without
+        repair.</span>
+      </a>
+      <a class="card" href="./data/sri-yantra.json" download>
+        <b>JSON</b><span>All coordinates at 40 digits, plus every cell and the
+        verification report.</span>
+      </a>
+      <a class="card" href="https://github.com/TheHardikDewra/sri-yantra">
+        <b>Source</b><span>The solver, the proofs, and this page.</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span id="stamp">—</span>
+  <a href="https://github.com/TheHardikDewra/sri-yantra">GitHub</a>
+</footer>
+
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>
