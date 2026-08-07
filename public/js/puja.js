@@ -310,6 +310,10 @@ export function createPuja(meru) {
         });
       add(s1.holder, (dt, age) => s1.tick(dt, age));
 
+      const lit = new THREE.PointLight(0xfff0d0, 0, R * 4.5, 2);
+      lit.position.set(0, H * 0.75, 0);
+      add(lit, (dt, age) => { lit.intensity = 8 * Math.min(1, age / 0.6); });
+
       const seat = ring(R * 0.88, 0, C.sandal, R * 0.014);
       seat.position.y = ground(R * 0.88, 0) + R * 0.004;
       seat.scale.setScalar(0.01);
@@ -591,6 +595,13 @@ export function createPuja(meru) {
         [0.78, 0.46], [0.82, 0.60], [0.76, 0.60], [0.72, 0.46],
         [0.56, 0.24], [0.28, 0.10], [0.00, 0.08],
       ];
+      // The key light comes from one side, so only the offering on that side
+      // was lit and the other three sank into a terrace of the same tone. A
+      // soft light over the ring shows all four.
+      const over = new THREE.PointLight(0xfff0d0, 0, R * 4.5, 2);
+      over.position.set(0, H * 0.75, 0);
+      add(over, (dt, age) => { over.intensity = 9 * Math.min(1, age / 0.6); });
+
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2;
         const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;   // on the bhupura
@@ -615,6 +626,10 @@ export function createPuja(meru) {
     } },
 
     { view: [0.5, 0.66, 1.30], hold: 3.6, run() {           // 14 Tambula
+      const over2 = new THREE.PointLight(0xfff0d0, 0, R * 4.5, 2);
+      over2.position.set(0, H * 0.75, 0);
+      add(over2, (dt, age) => { over2.intensity = 9 * Math.min(1, age / 0.6); });
+
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
         const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;
