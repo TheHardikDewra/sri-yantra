@@ -156,9 +156,15 @@ the written STL, checked as a file:
 VERDICT: PASS
 ```
 
+The bhūpura contributes three terraces rather than one. It is drawn in the
+plane as three parallel lines, and extruding only the outermost as a single
+plate throws that away — the gates flatten into plain tabs and the T-shaped
+portal stops reading.
+
 The 3D view is clamped above the horizon. An inverted Śrī Yantra is a different
 figure — the Śiva yantra of kāpālika practice — so the Meru is only ever shown
-the way up it is meant to stand.
+the way up it is meant to stand. Straight down is fine and offered as a preset:
+that is how the flat yantra is read.
 
 ## Running it
 
@@ -185,6 +191,9 @@ cd public && python3 -m http.server 8765
 - A. P. Kulaichev, *Śrīyantra and its mathematical properties*, Indian Journal
   of History of Science **19** (1984) 279–292.
 - C. S. Rao, *Geometry of Srichakra* (Vagmi).
+
+Interface icons are [Phosphor](https://phosphoricons.com) (MIT), inlined as an
+SVG sprite so the page makes no outside requests.
 
 ## Licence
 

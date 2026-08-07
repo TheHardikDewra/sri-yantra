@@ -21,11 +21,20 @@
   --wrap: 1120px;
 }
 
+/* Dark is not the light theme inverted. A white-on-black yantra reads as a
+   photographic negative; warming the line work to a gilt parchment and taking
+   the enclosure fills up in both saturation and luminance makes it read as
+   what it is - gold laid on a dark ground. Flat colour still, no glows. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #131210; --paper-2: #1b1916; --ink: #f0ebe0; --ink-2: #a49c8c;
-    --rule: #332f28; --accent: #d4705f;
-    --e0: #d4705f; --e1: #d98a55; --e2: #d9ae5c; --e3: #86a377; --e4: #6b9ab4;
+    --paper: #12110e; --paper-2: #1a1815;
+    --ink: #ecdfc2; --ink-2: #a2957e; --rule: #37312a;
+    --accent: #e0714f;
+    --e0: #e04a30;   /* trikona      */
+    --e1: #e5822f;   /* ashtakona    */
+    --e2: #e0ab3e;   /* antardasara  */
+    --e3: #7dab60;   /* bahirdasara  */
+    --e4: #4f92c4;   /* chaturdasara */
   }
 }
 
@@ -42,6 +51,20 @@ body {
 
 h1, h2, h3 { line-height: 1.18; letter-spacing: -0.015em; }
 b { font-weight: 600; }
+
+/* ---------------------------------------------------------------- icons */
+/* Phosphor, regular weight, inlined as a sprite. They take the colour of the
+   text they sit beside, so nothing needs restating per theme. */
+.i {
+  width: 1em; height: 1em; flex: 0 0 auto;
+  fill: currentColor; vertical-align: -0.13em;
+  margin-right: .45em;
+}
+.tool-label .i { width: 1.15em; height: 1.15em; opacity: .75; }
+.card b .i { width: 1.15em; height: 1.15em; color: var(--accent); }
+.topbar nav a { display: inline-flex; align-items: center; }
+.segmented button { display: inline-flex; align-items: center; justify-content: center; }
+.segmented button .i { margin-right: .35em; }
 
 /* --------------------------------------------------------------- topbar */
 
@@ -141,6 +164,7 @@ b { font-weight: 600; }
 .tool { display: flex; align-items: center; gap: 12px; }
 .tool.grow { flex: 1 1 auto; }
 .tool-label {
+  display: inline-flex; align-items: center;
   font-size: 11px; font-weight: 600; letter-spacing: .1em;
   text-transform: uppercase; color: var(--ink-2); white-space: nowrap;
 }
@@ -239,7 +263,8 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
   border: 1px solid var(--rule); border-radius: 12px; background: var(--paper);
 }
 .card:hover { border-color: var(--ink); }
-.card b { display: block; font-size: 15px; color: var(--ink); margin-bottom: 5px; }
+.card b { display: flex; align-items: center; font-size: 15px;
+  color: var(--ink); margin-bottom: 5px; }
 .card span { font-size: 13.5px; color: var(--ink-2); }
 
 /* --------------------------------------------------------------- footer */

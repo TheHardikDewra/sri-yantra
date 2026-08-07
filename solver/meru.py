@@ -37,6 +37,7 @@ from build import LAYOUT, _polar, bhupura_points
 CORNER_NUDGE = 2e-4
 MIN_GAP = 2e-5
 MIN_WALL = 2e-4
+MIN_RISE = 0.055      # shortest wall the eye should still read as a step
 
 
 def _tri_depth(tris, p):
@@ -124,10 +125,17 @@ def _outline_r(pts, th):
 
 
 def tiers(tris, bindu, angles, L=LAYOUT):
-    """The ten terrace outlines, outermost first, each as r(theta)."""
-    wall = bhupura_points(0, L)
-    out = [
-        ("bhupura", [_outline_r(wall, t) for t in angles]),
+    """The terrace outlines, outermost first, each as r(theta).
+
+    The bhupura contributes three of them, not one. It is drawn in the plane as
+    three parallel lines, and giving the solid a single extruded plate for the
+    outermost of them throws that away - the gates flatten into plain tabs and
+    the T-shaped portal stops reading. Three low steps, one per line, put the
+    articulation back.
+    """
+    out = [(f"bhupura{k}", [_outline_r(bhupura_points(k, L), t) for t in angles])
+           for k in range(len(L["bhupura"]))]
+    out += [
         ("trivritta", [L["trivritta"][-1]] * len(angles)),
         ("lotus16", [_petal_r(16, *L["lotus16"], t) for t in angles]),
         ("lotus8", [_petal_r(8, *L["lotus8"], t) for t in angles]),
@@ -184,10 +192,17 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
         ts[i] = (ts[i][0], [min(r, outer[j] - MIN_WALL)
                             for j, r in enumerate(inner)])
 
-    # terrace heights: a straight-sided pyramid reads best, so step by how far
-    # each outline has shrunk rather than in equal slices
+    # Terrace heights: a straight-sided pyramid reads best, so step by how far
+    # each outline has shrunk rather than in equal slices. The three bhupura
+    # lines are nearly the same size, so that rule alone would stack them at
+    # almost the same height and leave walls of no height between them; every
+    # tier therefore gets at least MIN_RISE, which also gives the plinth its
+    # three visible steps.
     mean = [sum(rs) / len(rs) for _, rs in ts]
-    z = [base_h + height * (1 - m / mean[0]) for m in mean]
+    z = []
+    for m in mean:
+        want = base_h + height * (1 - m / mean[0])
+        z.append(want if not z else max(want, z[-1] + MIN_RISE))
     z.append(z[-1] + bindu_h)
 
     V, F = [], []

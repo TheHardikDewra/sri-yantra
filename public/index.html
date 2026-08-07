@@ -16,16 +16,36 @@
 </head>
 <body>
 
+<!-- Phosphor icons (MIT), inlined so the page makes no outside requests -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+<symbol id="i-triangle" viewBox="0 0 256 256"><path d="M236.8,188.09,149.35,36.22a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.34,24.34,0,0,0,40.55,224h174.9a24.34,24.34,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM222.93,203.8a8.5,8.5,0,0,1-7.48,4.2H40.55a8.5,8.5,0,0,1-7.48-4.2,7.59,7.59,0,0,1,0-7.72L120.52,44.21a8.75,8.75,0,0,1,15,0l87.45,151.87A7.59,7.59,0,0,1,222.93,203.8Z"/></symbol>
+<symbol id="i-mountains" viewBox="0 0 256 256"><path d="M164,80a28,28,0,1,0-28-28A28,28,0,0,0,164,80Zm0-40a12,12,0,1,1-12,12A12,12,0,0,1,164,40Zm90.88,155.92-54.56-92.08A15.87,15.87,0,0,0,186.55,96h0a15.85,15.85,0,0,0-13.76,7.84L146.63,148l-44.84-76.1a16,16,0,0,0-27.58,0L1.11,195.94A8,8,0,0,0,8,208H248a8,8,0,0,0,6.88-12.08ZM88,80l23.57,40H64.43ZM22,192l33-56h66l18.74,31.8,0,0L154,192Zm150.57,0-16.66-28.28L186.55,112,234,192Z"/></symbol>
+<symbol id="i-function" viewBox="0 0 256 256"><path d="M208,40a8,8,0,0,1-8,8H170.71a24,24,0,0,0-23.62,19.71L137.59,120H184a8,8,0,0,1,0,16H134.68l-10,55.16A40,40,0,0,1,85.29,224H56a8,8,0,0,1,0-16H85.29a24,24,0,0,0,23.62-19.71l9.5-52.29H72a8,8,0,0,1,0-16h49.32l10-55.16A40,40,0,0,1,170.71,32H200A8,8,0,0,1,208,40Z"/></symbol>
+<symbol id="i-download-simple" viewBox="0 0 256 256"><path d="M224,144v64a8,8,0,0,1-8,8H40a8,8,0,0,1-8-8V144a8,8,0,0,1,16,0v56H208V144a8,8,0,0,1,16,0Zm-101.66,5.66a8,8,0,0,0,11.32,0l40-40a8,8,0,0,0-11.32-11.32L136,124.69V32a8,8,0,0,0-16,0v92.69L93.66,98.34a8,8,0,0,0-11.32,11.32Z"/></symbol>
+<symbol id="i-palette" viewBox="0 0 256 256"><path d="M200.77,53.89A103.27,103.27,0,0,0,128,24h-1.07A104,104,0,0,0,24,128c0,43,26.58,79.06,69.36,94.17A32,32,0,0,0,136,192a16,16,0,0,1,16-16h46.21a31.81,31.81,0,0,0,31.2-24.88,104.43,104.43,0,0,0,2.59-24A103.28,103.28,0,0,0,200.77,53.89Zm13,93.71A15.89,15.89,0,0,1,198.21,160H152a32,32,0,0,0-32,32,16,16,0,0,1-21.31,15.07C62.49,194.3,40,164,40,128a88,88,0,0,1,87.09-88h.9a88.35,88.35,0,0,1,88,87.25A88.86,88.86,0,0,1,213.81,147.6ZM140,76a12,12,0,1,1-12-12A12,12,0,0,1,140,76ZM96,100A12,12,0,1,1,84,88,12,12,0,0,1,96,100Zm0,56a12,12,0,1,1-12-12A12,12,0,0,1,96,156Zm88-56a12,12,0,1,1-12-12A12,12,0,0,1,184,100Z"/></symbol>
+<symbol id="i-brackets-curly" viewBox="0 0 256 256"><path d="M43.18,128a29.78,29.78,0,0,1,8,10.26c4.8,9.9,4.8,22,4.8,33.74,0,24.31,1,36,24,36a8,8,0,0,1,0,16c-17.48,0-29.32-6.14-35.2-18.26-4.8-9.9-4.8-22-4.8-33.74,0-24.31-1-36-24-36a8,8,0,0,1,0-16c23,0,24-11.69,24-36,0-11.72,0-23.84,4.8-33.74C50.68,38.14,62.52,32,80,32a8,8,0,0,1,0,16C57,48,56,59.69,56,84c0,11.72,0,23.84-4.8,33.74A29.78,29.78,0,0,1,43.18,128ZM240,120c-23,0-24-11.69-24-36,0-11.72,0-23.84-4.8-33.74C205.32,38.14,193.48,32,176,32a8,8,0,0,0,0,16c23,0,24,11.69,24,36,0,11.72,0,23.84,4.8,33.74a29.78,29.78,0,0,0,8,10.26,29.78,29.78,0,0,0-8,10.26c-4.8,9.9-4.8,22-4.8,33.74,0,24.31-1,36-24,36a8,8,0,0,0,0,16c17.48,0,29.32-6.14,35.2-18.26,4.8-9.9,4.8-22,4.8-33.74,0-24.31,1-36,24-36a8,8,0,0,0,0-16Z"/></symbol>
+<symbol id="i-circles-three" viewBox="0 0 256 256"><path d="M172,76a44,44,0,1,0-44,44A44.05,44.05,0,0,0,172,76Zm-44,28a28,28,0,1,1,28-28A28,28,0,0,1,128,104Zm60,24a44,44,0,1,0,44,44A44.05,44.05,0,0,0,188,128Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,188,200ZM68,128a44,44,0,1,0,44,44A44.05,44.05,0,0,0,68,128Zm0,72a28,28,0,1,1,28-28A28,28,0,0,1,68,200Z"/></symbol>
+<symbol id="i-sphere" viewBox="0 0 256 256"><path d="M128,24A104,104,0,1,0,232,128,104.11,104.11,0,0,0,128,24Zm88,104c0,6-17,16.23-48.77,21.17.51-7,.77-14.08.77-21.17,0-32.24-5.35-64.72-15.74-84.6A88.17,88.17,0,0,1,216,128ZM128,40c8.15,0,24,31.06,24,88,0,8.24-.34,15.92-.93,23.07-7.15.59-14.83.93-23.07.93-56.94,0-88-15.85-88-24A88.1,88.1,0,0,1,128,40ZM43.4,152.26C63.28,162.65,95.76,168,128,168c7.09,0,14.19-.26,21.17-.77C144.23,199,134,216,128,216A88.17,88.17,0,0,1,43.4,152.26ZM152.26,212.6c6.29-12,10.73-28.67,13.26-47.08,18.41-2.53,35-7,47.08-13.26A88.4,88.4,0,0,1,152.26,212.6Z"/></symbol>
+<symbol id="i-eye" viewBox="0 0 256 256"><path d="M247.31,124.76c-.35-.79-8.82-19.58-27.65-38.41C194.57,61.26,162.88,48,128,48S61.43,61.26,36.34,86.35C17.51,105.18,9,124,8.69,124.76a8,8,0,0,0,0,6.5c.35.79,8.82,19.57,27.65,38.4C61.43,194.74,93.12,208,128,208s66.57-13.26,91.66-38.34c18.83-18.83,27.3-37.61,27.65-38.4A8,8,0,0,0,247.31,124.76ZM128,192c-30.78,0-57.67-11.19-79.93-33.25A133.47,133.47,0,0,1,25,128,133.33,133.33,0,0,1,48.07,97.25C70.33,75.19,97.22,64,128,64s57.67,11.19,79.93,33.25A133.46,133.46,0,0,1,231.05,128C223.84,141.46,192.43,192,128,192Zm0-112a48,48,0,1,0,48,48A48.05,48.05,0,0,0,128,80Zm0,80a32,32,0,1,1,32-32A32,32,0,0,1,128,160Z"/></symbol>
+<symbol id="i-house" viewBox="0 0 256 256"><path d="M219.31,108.68l-80-80a16,16,0,0,0-22.62,0l-80,80A15.87,15.87,0,0,0,32,120v96a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V160h32v56a8,8,0,0,0,8,8h64a8,8,0,0,0,8-8V120A15.87,15.87,0,0,0,219.31,108.68ZM208,208H160V152a8,8,0,0,0-8-8H104a8,8,0,0,0-8,8v56H48V120l80-80,80,80Z"/></symbol>
+<symbol id="i-arrow-line-down" viewBox="0 0 256 256"><path d="M50.34,117.66a8,8,0,0,1,11.32-11.32L120,164.69V32a8,8,0,0,1,16,0V164.69l58.34-58.35a8,8,0,0,1,11.32,11.32l-72,72a8,8,0,0,1-11.32,0ZM216,208H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"/></symbol>
+<symbol id="i-arrows-clockwise" viewBox="0 0 256 256"><path d="M224,48V96a8,8,0,0,1-8,8H168a8,8,0,0,1,0-16h28.69L182.06,73.37a79.56,79.56,0,0,0-56.13-23.43h-.45A79.52,79.52,0,0,0,69.59,72.71,8,8,0,0,1,58.41,61.27a96,96,0,0,1,135,.79L208,76.69V48a8,8,0,0,1,16,0ZM186.41,183.29a80,80,0,0,1-112.47-.66L59.31,168H88a8,8,0,0,0,0-16H40a8,8,0,0,0-8,8v48a8,8,0,0,0,16,0V179.31l14.63,14.63A95.43,95.43,0,0,0,130,222.06h.53a95.36,95.36,0,0,0,67.07-27.33,8,8,0,0,0-11.18-11.44Z"/></symbol>
+<symbol id="i-cube" viewBox="0 0 256 256"><path d="M223.68,66.15,135.68,18h0a15.88,15.88,0,0,0-15.36,0l-88,48.17a16,16,0,0,0-8.32,14v95.64a16,16,0,0,0,8.32,14l88,48.17a15.88,15.88,0,0,0,15.36,0l88-48.17a16,16,0,0,0,8.32-14V80.18A16,16,0,0,0,223.68,66.15ZM128,32h0l80.34,44L128,120,47.66,76ZM40,90l80,43.78v85.79L40,175.82Zm96,129.57V133.82L216,90v85.78Z"/></symbol>
+<symbol id="i-file-svg" viewBox="0 0 256 256"><path d="M87.82,196.31a20.82,20.82,0,0,1-9.19,15.23C73.44,215,67,216,61.14,216A61.23,61.23,0,0,1,46,214a8,8,0,0,1,4.3-15.41c4.38,1.2,14.95,2.7,19.55-.36.88-.59,1.83-1.52,2.14-3.93.35-2.67-.71-4.1-12.78-7.59-9.35-2.7-25-7.23-23-23.11a20.55,20.55,0,0,1,9-14.95c11.84-8,30.72-3.31,32.83-2.76a8,8,0,0,1-4.07,15.48c-4.48-1.17-15.23-2.56-19.83.56a4.54,4.54,0,0,0-2,3.67c-.11.9-.14,1.09,1.12,1.9,2.31,1.49,6.44,2.68,10.45,3.84C73.5,174.17,90.06,179,87.82,196.31ZM216,88v24a8,8,0,0,1-16,0V96H152a8,8,0,0,1-8-8V40H56v72a8,8,0,1,1-16,0V40A16,16,0,0,1,56,24h96a8,8,0,0,1,5.65,2.34l56,56A8,8,0,0,1,216,88Zm-56-8h28.69L160,51.31Zm-13.3,64.47a8,8,0,0,0-10.23,4.84L124,184.21l-12.47-34.9a8,8,0,1,0-15.06,5.38l20,56a8,8,0,0,0,15.07,0l20-56A8,8,0,0,0,146.7,144.47ZM208,176h-8a8,8,0,0,0,0,16v5.29a13.38,13.38,0,0,1-8,2.71c-8.82,0-16-9-16-20s7.18-20,16-20a13.27,13.27,0,0,1,7.53,2.38,8,8,0,0,0,8.95-13.26A29.38,29.38,0,0,0,192,144c-17.64,0-32,16.15-32,36s14.36,36,32,36a30.06,30.06,0,0,0,21.78-9.6,8,8,0,0,0,2.22-5.53V184A8,8,0,0,0,208,176Z"/></symbol>
+<symbol id="i-image" viewBox="0 0 256 256"><path d="M216,40H40A16,16,0,0,0,24,56V200a16,16,0,0,0,16,16H216a16,16,0,0,0,16-16V56A16,16,0,0,0,216,40Zm0,16V158.75l-26.07-26.06a16,16,0,0,0-22.63,0l-20,20-44-44a16,16,0,0,0-22.62,0L40,149.37V56ZM40,172l52-52,80,80H40Zm176,28H194.63l-36-36,20-20L216,181.38V200ZM144,100a12,12,0,1,1,12,12A12,12,0,0,1,144,100Z"/></symbol>
+<symbol id="i-flower-lotus" viewBox="0 0 256 256"><path d="M245.83,121.63a15.53,15.53,0,0,0-9.52-7.33,73.51,73.51,0,0,0-22.17-2.22c4-19.85,1-35.55-2.06-44.86a16.15,16.15,0,0,0-18.79-10.88,85.53,85.53,0,0,0-28.55,12.12,94.58,94.58,0,0,0-27.11-33.25,16.05,16.05,0,0,0-19.26,0A94.48,94.48,0,0,0,91.26,68.46,85.53,85.53,0,0,0,62.71,56.34,16.15,16.15,0,0,0,43.92,67.22c-3,9.31-6,25-2.06,44.86a73.51,73.51,0,0,0-22.17,2.22,15.53,15.53,0,0,0-9.52,7.33,16,16,0,0,0-1.6,12.27c3.39,12.57,13.8,36.48,45.33,55.32S113.13,208,128.05,208s42.67,0,74-18.78c31.53-18.84,41.94-42.75,45.33-55.32A16,16,0,0,0,245.83,121.63ZM59.14,72.14a.2.2,0,0,1,.23-.15A70.43,70.43,0,0,1,85.18,83.66,118.65,118.65,0,0,0,80,119.17c0,18.74,3.77,34,9.11,46.28A123.59,123.59,0,0,1,69.57,140C51.55,108.62,55.3,84,59.14,72.14Zm3,103.35C35.47,159.57,26.82,140.05,24,129.7a59.82,59.82,0,0,1,22.5-1.17,129.08,129.08,0,0,0,9.15,19.41,142.28,142.28,0,0,0,34,39.56A114.92,114.92,0,0,1,62.1,175.49ZM128,190.4c-9.33-6.94-32-28.23-32-71.23C96,76.7,118.38,55.24,128,48c9.62,7.26,32,28.72,32,71.19C160,162.17,137.33,183.46,128,190.4ZM170.82,83.66A70.43,70.43,0,0,1,196.63,72a.2.2,0,0,1,.23.15C200.7,84,204.45,108.62,186.43,140a123.32,123.32,0,0,1-19.54,25.48c5.34-12.26,9.11-27.54,9.11-46.28A118.65,118.65,0,0,0,170.82,83.66ZM232,129.72c-2.77,10.25-11.4,29.81-38.09,45.77a114.92,114.92,0,0,1-27.55,12,142.28,142.28,0,0,0,34-39.56,129.08,129.08,0,0,0,9.15-19.41A59.69,59.69,0,0,1,232,129.71Z"/></symbol>
+</svg>
+
 <header class="topbar">
   <a class="brand" href="#top">
     <span class="mark" aria-hidden="true"></span>
     <span>Śrī&nbsp;Yantra</span>
   </a>
   <nav>
-    <a href="#figure">The figure</a>
-    <a href="#meru">Mahā Meru</a>
-    <a href="#maths">The maths</a>
-    <a href="#get">Download</a>
+    <a href="#figure"><svg class="i" aria-hidden="true"><use href="#i-triangle"/></svg>The figure</a>
+    <a href="#meru"><svg class="i" aria-hidden="true"><use href="#i-mountains"/></svg>Mahā Meru</a>
+    <a href="#maths"><svg class="i" aria-hidden="true"><use href="#i-function"/></svg>The maths</a>
+    <a href="#get"><svg class="i" aria-hidden="true"><use href="#i-download-simple"/></svg>Download</a>
   </nav>
 </header>
 
@@ -64,21 +84,21 @@
 
     <div class="toolbar">
       <div class="tool">
-        <span class="tool-label">Colour</span>
+        <span class="tool-label"><svg class="i" aria-hidden="true"><use href="#i-palette"/></svg>Colour</span>
         <div class="segmented" id="palette">
           <button data-pal="ink" class="on">Ink</button>
           <button data-pal="traditional">Traditional</button>
         </div>
       </div>
       <div class="tool">
-        <span class="tool-label">Parameters</span>
+        <span class="tool-label"><svg class="i" aria-hidden="true"><use href="#i-brackets-curly"/></svg>Parameters</span>
         <select id="variant">
           <option value="huet">Huet's canonical figure</option>
           <option value="traditional">Traditional 48-unit</option>
         </select>
       </div>
       <div class="tool grow">
-        <span class="tool-label">Draw</span>
+        <span class="tool-label"><svg class="i" aria-hidden="true"><use href="#i-circles-three"/></svg>Draw</span>
         <div class="pills">
           <label><input type="checkbox" id="c-fill" checked><span>43 triangles</span></label>
           <label><input type="checkbox" id="c-nine" checked><span>Nine triangles</span></label>
@@ -131,7 +151,7 @@
 
     <div class="toolbar">
       <div class="tool">
-        <span class="tool-label">Surface</span>
+        <span class="tool-label"><svg class="i" aria-hidden="true"><use href="#i-sphere"/></svg>Surface</span>
         <div class="segmented" id="material">
           <button data-mat="gold" class="on">Gold</button>
           <button data-mat="brass">Brass</button>
@@ -140,15 +160,22 @@
         </div>
       </div>
       <div class="tool grow">
-        <span class="tool-label">View</span>
+        <span class="tool-label"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg>View</span>
         <div class="pills">
           <label><input type="checkbox" id="c-spin"><span>Turn slowly</span></label>
           <label><input type="checkbox" id="c-edge" checked><span>Terrace edges</span></label>
           <label><input type="checkbox" id="c-wire"><span>Wireframe</span></label>
         </div>
-        <button class="ghost" id="c-reset" type="button">Reset view</button>
       </div>
-      <p class="hint">Drag to orbit · ctrl/⌘ + scroll to zoom · right-drag to pan.
+      <div class="tool">
+        <span class="tool-label"><svg class="i" aria-hidden="true"><use href="#i-arrows-clockwise"/></svg>Angle</span>
+        <div class="segmented" id="viewpoint">
+          <button data-view="front" class="on"><svg class="i" aria-hidden="true"><use href="#i-house"/></svg>Front</button>
+          <button data-view="top"><svg class="i" aria-hidden="true"><use href="#i-arrow-line-down"/></svg>Top-down</button>
+        </div>
+      </div>
+      <p class="hint">Drag to orbit · ctrl/⌘ + scroll to zoom · right-drag to
+      pan. Front and Top-down both return it dead square on the mirror plane.
       The view is clamped above the horizon: an inverted Śrī Yantra is a
       different figure, so the Meru only stands the way it is meant to.</p>
     </div>
@@ -253,24 +280,24 @@
     is free to use.</p>
     <div class="cards">
       <a class="card" id="dl-svg" download="sri-yantra.svg">
-        <b>SVG</b><span>The flat figure, vector, exactly as drawn above.</span>
+        <b><svg class="i" aria-hidden="true"><use href="#i-file-svg"/></svg>SVG</b><span>The flat figure, vector, exactly as drawn above.</span>
       </a>
       <a class="card" id="dl-png" href="#">
-        <b>PNG</b><span>2400 × 2400 raster of the current settings.</span>
+        <b><svg class="i" aria-hidden="true"><use href="#i-image"/></svg>PNG</b><span>2400 × 2400 raster of the current settings.</span>
       </a>
       <a class="card" href="./data/maha-meru.glb" download>
-        <b>GLB</b><span>The Mahā Meru mesh, ready for any 3D tool.</span>
+        <b><svg class="i" aria-hidden="true"><use href="#i-cube"/></svg>GLB</b><span>The Mahā Meru mesh, ready for any 3D tool.</span>
       </a>
       <a class="card" href="./data/maha-meru.stl" download>
-        <b>STL</b><span>Watertight and manifold — slices and prints without
+        <b><svg class="i" aria-hidden="true"><use href="#i-mountains"/></svg>STL</b><span>Watertight and manifold — slices and prints without
         repair.</span>
       </a>
       <a class="card" href="./data/sri-yantra.json" download>
-        <b>JSON</b><span>All coordinates at 40 digits, plus every cell and the
+        <b><svg class="i" aria-hidden="true"><use href="#i-brackets-curly"/></svg>JSON</b><span>All coordinates at 40 digits, plus every cell and the
         verification report.</span>
       </a>
       <a class="card" href="https://github.com/TheHardikDewra/sri-yantra">
-        <b>Source</b><span>The solver, the proofs, and this page.</span>
+        <b><svg class="i" aria-hidden="true"><use href="#i-flower-lotus"/></svg>Source</b><span>The solver, the proofs, and this page.</span>
       </a>
     </div>
   </div>

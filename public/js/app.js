@@ -134,7 +134,10 @@ async function startMeru() {
     $('#c-spin').addEventListener('change', e => meru.setSpin(e.target.checked));
     $('#c-wire').addEventListener('change', e => meru.setWireframe(e.target.checked));
     $('#c-edge').addEventListener('change', e => meru.setEdges(e.target.checked));
-    $('#c-reset').addEventListener('click', () => meru.reset());
+    $$('#viewpoint button').forEach(b => b.addEventListener('click', () => {
+      $$('#viewpoint button').forEach(x => x.classList.toggle('on', x === b));
+      meru.view(b.dataset.view);
+    }));
   } catch (err) {
     meru = null;
     $('#loading').textContent = 'could not load the 3D view: ' + err.message;

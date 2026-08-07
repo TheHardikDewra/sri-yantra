@@ -5,12 +5,15 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+// How far the plan view stops short of straight down. See minPolarAngle below.
+const TOP_PHI = 0.035;
+
 // A metal is almost entirely reflection, so without an environment to reflect
 // it renders nearly black however many lamps are pointed at it. The scene gets
 // a generated room environment for that; the lights below only shape it.
-// Metalness near 1 makes the surface almost pure reflection, and with only a
-// small generated room to reflect it goes muddy brown whatever the base colour
-// is. Half-metal reads as metal and keeps the terraces legible.
+// Metalness near 1 goes further and makes the surface almost pure reflection,
+// which turns muddy brown whatever the base colour is, so these sit at about
+// half metal: it reads as metal and keeps the terraces legible.
 export const MATERIALS = {
   gold:  { color: 0xd9a527, metalness: 0.62, roughness: 0.28,
            envMapIntensity: 0.95 },
@@ -39,12 +42,15 @@ export function mount(canvas, url) {
   controls.dampingFactor = 0.06;
   controls.minDistance = 2.2;
   controls.maxDistance = 22;
-  // Never let the camera drop below the horizon, and never let it go quite
-  // overhead. An inverted Sri Yantra is a different figure entirely - the
-  // Shiva yantra of kapalika practice - so the Meru is only ever seen the way
-  // up it is meant to stand.
+  // Never let the camera drop below the horizon. An inverted Sri Yantra is a
+  // different figure entirely - the Shiva yantra of kapalika practice - so the
+  // Meru is only ever seen the way up it is meant to stand. Straight down is
+  // fine and wanted: that is how the flat yantra is read.
   controls.maxPolarAngle = Math.PI * 0.47;
-  controls.minPolarAngle = Math.PI * 0.10;
+  // Not exactly zero. At the pole the azimuth is undefined and lookAt with a
+  // vertical up-vector degenerates, so the plan view stops two degrees short -
+  // far too little to see, enough to keep the maths well behaved.
+  controls.minPolarAngle = TOP_PHI;
   controls.autoRotateSpeed = 0.6;
   controls.autoRotate = false;   // off unless the viewer asks for it
 
@@ -216,10 +222,15 @@ export function mount(canvas, url) {
     controls.autoRotate = on;
     if (!on) squareUp();          // never leave it a degree off true
   };
-  state.reset = () => {
+  // Two ways of standing in front of it, both dead square on the mirror plane:
+  // the three-quarter view it is framed at, and the plan view that reads the
+  // yantra the way the flat figure is read.
+  state.view = which => {
     if (!state.home) return;
-    glideTo(state.home.theta, state.home.phi, state.home.radius);
+    const phi = which === 'top' ? TOP_PHI : state.home.phi;
+    glideTo(state.home.theta, phi, state.home.radius, 750);
   };
+  state.reset = () => state.view('front');
   state.squareUp = squareUp;
   return state;
 }
