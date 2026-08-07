@@ -299,7 +299,7 @@ export function createPuja(meru) {
       const s1 = swarm(geo.petal, [BLOOM[0], BLOOM[3], BLOOM[2]], n,
         i => {
           const a = (i / n) * Math.PI * 2;
-          const r = R * 0.90;
+          const r = R * 0.94;
           const x = Math.cos(a) * r, z = Math.sin(a) * r;
           return { a, x, z, y: ground(x, z) + R * 0.008,
                    rx: -Math.PI / 2, ry: 0, rz: -a - Math.PI / 2,
@@ -310,8 +310,8 @@ export function createPuja(meru) {
         });
       add(s1.holder, (dt, age) => s1.tick(dt, age));
 
-      const seat = ring(R * 0.90, 0, C.sandal, R * 0.010);
-      seat.position.y = ground(R * 0.90, 0) + R * 0.002;
+      const seat = ring(R * 0.94, 0, C.sandal, R * 0.012);
+      seat.position.y = ground(R * 0.94, 0) + R * 0.003;
       seat.scale.setScalar(0.01);
       add(seat, (dt, age) => seat.scale.setScalar(ease(Math.min(1, age / 0.8))));
     } },
@@ -351,16 +351,16 @@ export function createPuja(meru) {
     { view: [0.7, 1.16, 1.00], hold: 3.6, run() {           // 7 Vastra
       // Wound round and up, riding the silhouette. The radius has to be asked
       // of the mountain at each height or the band saws straight through it.
-      const pts = [], turns = 2.6;
+      const pts = [], turns = 2.0;
       for (let i = 0; i <= 300; i++) {
         const t = i / 300;
         const a = t * Math.PI * 2 * turns;
         const y = H * (0.10 + t * 0.56);
-        const rad = radiusAt(y, a) + R * 0.035;
+        const rad = radiusAt(y, a) + R * 0.105;   // proud of the wall
         pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
       }
       const cloth = new THREE.Mesh(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 320, R * 0.040, 5, false),
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 320, R * 0.055, 6, false),
         matt(C.cloth, 1, 0.88));
       add(cloth, (dt, age) => {
         cloth.geometry.setDrawRange(0,
@@ -375,12 +375,12 @@ export function createPuja(meru) {
       for (let i = 0; i <= 260; i++) {
         const t = i / 260, a = t * Math.PI * 2;
         const y = H * (0.86 - 0.70 * Math.abs(Math.sin(a / 2)));
-        const rad = radiusAt(y, a) + R * 0.016;
+        const rad = radiusAt(y, a) + R * 0.055;
         pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
       }
       const thread = new THREE.Mesh(
         new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 320,
-          R * 0.009, 6, true), matt(C.thread, 1, 0.9));
+          R * 0.017, 7, true), matt(C.thread, 1, 0.9));
       add(thread, (dt, age) => {
         thread.geometry.setDrawRange(0,
           Math.floor(thread.geometry.index.count * ease(Math.min(1, age / 1.5))));
@@ -546,7 +546,7 @@ export function createPuja(meru) {
       });
     } },
 
-    { view: [0, 1.20, 0.88], hold: 3.6, run() {             // 13 Naivedya
+    { view: [0, 1.00, 0.90], hold: 3.6, run() {             // 13 Naivedya
       // These were half-spheres placed with their centre on the surface, so
       // the bowl was buried and only its dome showed - a ball stuck in the
       // mountain. A lathed katori stands on its own base at ground level.
@@ -557,9 +557,9 @@ export function createPuja(meru) {
       ];
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2;
-        const x = Math.cos(a) * R * 0.80, z = Math.sin(a) * R * 0.80;
+        const x = Math.cos(a) * R * 0.94, z = Math.sin(a) * R * 0.94;
         const g = new THREE.Group();
-        const n = R * 0.185;
+        const n = R * 0.20;
         const bowl = new THREE.Mesh(
           new THREE.LatheGeometry(
             bowlProfile.map(([u, v]) => new THREE.Vector2(u * n, v * n)), 26),
@@ -578,10 +578,10 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0.5, 1.20, 0.88], hold: 3.4, run() {           // 14 Tambula
+    { view: [0.5, 1.00, 0.90], hold: 3.4, run() {           // 14 Tambula
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
-        const x = Math.cos(a) * R * 0.80, z = Math.sin(a) * R * 0.80;
+        const x = Math.cos(a) * R * 0.94, z = Math.sin(a) * R * 0.94;
         const g = new THREE.Group();
         for (let j = 0; j < 3; j++) {
           const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.55));
