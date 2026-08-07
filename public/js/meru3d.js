@@ -50,14 +50,18 @@ export function mount(canvas, url) {
 
   // The wheel belongs to the page. Zoom only on ctrl/cmd + wheel, the way maps
   // do it, so scrolling past the Meru never drags the camera around.
+  //
+  // The step has to follow the size of the delta, not just its sign: a trackpad
+  // pinch is one gesture but arrives as a burst of dozens of small events, so a
+  // fixed step per event runs away and the zoom feels wild.
   controls.enableZoom = false;
   canvas.addEventListener('wheel', e => {
     if (!(e.ctrlKey || e.metaKey)) return;
     e.preventDefault();
+    const step = Math.exp(Math.max(-40, Math.min(40, e.deltaY)) * 0.0022);
     const v = camera.position.clone().sub(controls.target);
     const d = Math.min(controls.maxDistance,
-                       Math.max(controls.minDistance,
-                                v.length() * (1 + Math.sign(e.deltaY) * 0.12)));
+                       Math.max(controls.minDistance, v.length() * step));
     camera.position.copy(controls.target).add(v.setLength(d));
   }, { passive: false });
 
@@ -144,6 +148,8 @@ export function mount(canvas, url) {
     const reach = Math.max(size.x, size.z) * 0.5;
     controls.target.set(0, size.y * 0.38, 0);
     state.home = new THREE.Spherical(reach * 3.05, Math.PI * 0.335, 0);
+    controls.minDistance = state.home.radius * 0.45;
+    controls.maxDistance = state.home.radius * 2.10;
     place(state.home);
     controls.update();
     state.ready = true;
