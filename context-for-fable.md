@@ -153,12 +153,26 @@ lathes and instanced swarms — no textures, no sprites.
 
 **Known-weak, the honest list:**
 
-- **Naivedya / Tāmbūla / Āsana visibility.** All four bowls are provably in the
-  scene at the right places on the bhūpura terrace (probed: `(±1.58, 0.31, 0)`
-  and `(0, 0.31, ±1.58)`), but the key light sits at +x so only the lit one
-  read against a terrace of the same tone. I added a soft overhead light per
-  act as the last change — **this is the one thing I did not get to verify
-  visually before handing over.** Check it first.
+- **Naivedya / Tāmbūla / Āsana — probably fine; my "bug" was a false alarm.**
+  I spent several rounds chasing "only one of the four bowls renders". It was
+  not real. The window I was testing in was minimised, so `requestAnimationFrame`
+  was suspended: the renderer had drawn 40 frames total and stopped
+  (`renderer.info.render.frame` did not advance over 5 s, `document.hidden` was
+  true). Every screenshot was a **stale frame**, and the `scale: 0.01` I read
+  off the groups was simply `tick()` never having run.
+
+  The scene graph is correct and was verified: four groups at `(±1.58, 0.31, 0)`
+  and `(0, 0.31, ±1.58)`, sitting on the bhūpura terrace, all four
+  `onScreen: true`. On a **visible** window they should animate up and render.
+  Confirm that first, in a foreground window.
+
+  I also added a soft overhead `PointLight` to naivedya, tāmbūla and āsana on
+  the strength of that false diagnosis (I thought the key light at +x was
+  leaving three in shadow). It is harmless and arguably an improvement, but it
+  was not fixing a real fault — remove it if it flattens them.
+
+  **Lesson for you: before believing anything you see in a driven browser,
+  check `renderer.info.render.frame` is advancing.**
 - **Vastra above the drum.** The fitted sheet reads beautifully on the
   trivṛtta drum; higher up, where the terraces step in sharply, it tucks into
   the step angles and is hard to see. Probably wants the hem raised or the
