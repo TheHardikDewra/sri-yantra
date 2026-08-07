@@ -129,16 +129,34 @@ export function createPuja(meru) {
   // steps should stay steps.
   const prof = meru.profile;
   const NA = prof ? prof.angles.length : 0;
-  function ground(x, z) {
-    if (!prof) return 0;
-    const r = Math.hypot(x, z);
+  const bearing = (x, z) => {
     let a = Math.atan2(z, x);
     if (a < 0) a += Math.PI * 2;
-    const ai = Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
+    return Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
+  };
+
+  // Height of the solid under a point.
+  function ground(x, z) {
+    if (!prof) return 0;
+    const r = Math.hypot(x, z), ai = bearing(x, z);
     for (let i = prof.tiers.length - 1; i >= 0; i--) {
       if (r <= prof.tiers[i].r[ai]) return prof.tiers[i].z;
     }
     return 0;
+  }
+
+  // How far out the solid reaches at a given height, along a given bearing.
+  // Cloth and thread have to lie ON the mountain; a radius picked by eye cuts
+  // straight through it, which is what was happening.
+  function radiusAt(y, theta) {
+    if (!prof) return 0;
+    let a = theta % (Math.PI * 2);
+    if (a < 0) a += Math.PI * 2;
+    const ai = Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
+    for (let i = 0; i < prof.tiers.length; i++) {
+      if (prof.tiers[i].z >= y) return prof.tiers[i].r[ai];
+    }
+    return prof.tiers[prof.tiers.length - 1].r[ai];
   }
 
   const geo = { blossom: blossomGeometry(), petal: petalGeometry(0.22), drop: dropGeometry() };
@@ -272,17 +290,30 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0, 1.30, 1.05], hold: 2.8, run() {             // 2 Asana
-      const n = 16, r0 = R * 1.02, r1 = R * 1.30;
-      const s = swarm(geo.petal, [BLOOM[0], BLOOM[3]], n,
+    { view: [0, 0.95, 1.18], hold: 3.2, run() {             // 2 Asana
+      // A lotus seat laid round the base. It has to sit ON the bhupura, not
+      // at a radius picked by eye - the gated square reaches 1.80 along the
+      // axes and 2.07 into the corners, so anything fixed floats off one and
+      // sinks into the other. ground() puts every petal on the terrace.
+      const n = 32;
+      const s1 = swarm(geo.petal, [BLOOM[0], BLOOM[3], BLOOM[2]], n,
         i => {
           const a = (i / n) * Math.PI * 2;
-          return { a, x: Math.cos(a) * (r0 + r1) / 2, z: Math.sin(a) * (r0 + r1) / 2,
-                   y: 0.02, rx: -Math.PI / 2, ry: 0, rz: -a + Math.PI / 2,
-                   s: 0.001, grow: (r1 - r0) };
+          const r = R * 0.90;
+          const x = Math.cos(a) * r, z = Math.sin(a) * r;
+          return { a, x, z, y: ground(x, z) + R * 0.008,
+                   rx: -Math.PI / 2, ry: 0, rz: -a - Math.PI / 2,
+                   s: 0.001, full: R * 0.30, i };
         },
-        (b, dt, age) => { b.s = ease(Math.min(1, age / 0.9)) * b.grow; });
-      add(s.holder, (dt, age) => s.tick(dt, age));
+        (b, dt, age) => {
+          b.s = b.full * ease(Math.min(1, Math.max(0, age - b.i * 0.025) / 0.5));
+        });
+      add(s1.holder, (dt, age) => s1.tick(dt, age));
+
+      const seat = ring(R * 0.90, 0, C.sandal, R * 0.010);
+      seat.position.y = ground(R * 0.90, 0) + R * 0.002;
+      seat.scale.setScalar(0.01);
+      add(seat, (dt, age) => seat.scale.setScalar(ease(Math.min(1, age / 0.8))));
     } },
 
     { view: [0, 1.38, 1.00], hold: 3.6, run() {             // 3 Padya
@@ -317,44 +348,42 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0.7, 1.20, 0.95], hold: 3.4, run() {           // 7 Vastra
-      // a band that follows the silhouette, wound round and up
-      const pts = [];
-      const turns = 2.4;
-      for (let i = 0; i <= 240; i++) {
-        const t = i / 240;
+    { view: [0.7, 1.16, 1.00], hold: 3.6, run() {           // 7 Vastra
+      // Wound round and up, riding the silhouette. The radius has to be asked
+      // of the mountain at each height or the band saws straight through it.
+      const pts = [], turns = 2.6;
+      for (let i = 0; i <= 300; i++) {
+        const t = i / 300;
         const a = t * Math.PI * 2 * turns;
-        const y = H * (0.08 + t * 0.52);
-        const rad = R * (0.94 - t * 0.55);
+        const y = H * (0.10 + t * 0.56);
+        const rad = radiusAt(y, a) + R * 0.035;
         pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
       }
-      const curve = new THREE.CatmullRomCurve3(pts);
       const cloth = new THREE.Mesh(
-        new THREE.TubeGeometry(curve, 260, R * 0.045, 4, false),
-        matt(C.cloth, 1, 0.85));
-      cloth.scale.set(1, 1, 1);
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 320, R * 0.040, 5, false),
+        matt(C.cloth, 1, 0.88));
       add(cloth, (dt, age) => {
-        const t = Math.min(1, age / 1.6);
-        cloth.geometry.setDrawRange(0, Math.floor(cloth.geometry.index.count * ease(t)));
+        cloth.geometry.setDrawRange(0,
+          Math.floor(cloth.geometry.index.count * ease(Math.min(1, age / 1.8))));
       });
     } },
 
-    { view: [0.9, 1.15, 0.95], hold: 3.0, run() {           // 8 Yajnopavita
+    { view: [0.9, 1.10, 1.00], hold: 3.2, run() {           // 8 Yajnopavita
+      // Over one shoulder and under the other arm: a loop that rides high on
+      // one side and low on the other, held against the surface throughout.
       const pts = [];
-      for (let i = 0; i <= 200; i++) {
-        const t = i / 200, a = t * Math.PI * 2;
-        pts.push(new THREE.Vector3(
-          Math.cos(a) * R * 0.70,
-          H * (0.90 - 0.72 * Math.abs(Math.sin(a / 2))),
-          Math.sin(a) * R * 0.42));
+      for (let i = 0; i <= 260; i++) {
+        const t = i / 260, a = t * Math.PI * 2;
+        const y = H * (0.86 - 0.70 * Math.abs(Math.sin(a / 2)));
+        const rad = radiusAt(y, a) + R * 0.016;
+        pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
       }
       const thread = new THREE.Mesh(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 240,
-          R * 0.007, 5, true), matt(C.thread, 1, 0.9));
-      thread.rotation.y = -0.6;
+        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 320,
+          R * 0.009, 6, true), matt(C.thread, 1, 0.9));
       add(thread, (dt, age) => {
         thread.geometry.setDrawRange(0,
-          Math.floor(thread.geometry.index.count * ease(Math.min(1, age / 1.3))));
+          Math.floor(thread.geometry.index.count * ease(Math.min(1, age / 1.5))));
       });
     } },
 
@@ -418,105 +447,204 @@ export function createPuja(meru) {
       add(petals.holder, dt => petals.tick(dt));
     } },
 
-    { view: [0.6, 1.18, 1.05], hold: 4.0, run() {           // 11 Dhupa
+    { view: [0.6, 1.12, 1.05], hold: 4.6, run() {           // 11 Dhupa
+      // Smoke was flat untextured quads, which read as blurry grey cards. It
+      // is spheres now - round from every angle, no texture, no gradient -
+      // faint and many, growing and thinning as they climb.
+      const sx = R * 0.70, sz = R * 0.34;
+      const gy = ground(sx, sz);
+      const holder = new THREE.Group();
       const stick = new THREE.Mesh(
-        new THREE.CylinderGeometry(R * 0.008, R * 0.008, H * 0.22, 6),
-        matt(0x6b4b2a));
-      stick.position.set(R * 0.72, H * 0.11, R * 0.30);
-      add(stick, () => {});
-      const s = swarm(new THREE.PlaneGeometry(1, 1), [C.smoke], 150,
-        () => ({ a: rnd(0, 6.3), r: rnd(0, R * 0.05),
-                 x: R * 0.72, z: R * 0.30, y: H * rnd(0.22, 0.4),
-                 s: R * rnd(0.03, 0.08), o: 1 }),
+        new THREE.CylinderGeometry(R * 0.007, R * 0.009, H * 0.26, 8),
+        matt(0x5d4326));
+      stick.position.set(sx, gy + H * 0.13, sz);
+      const ember = new THREE.Mesh(
+        new THREE.SphereGeometry(R * 0.010, 8, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff7a2a }));
+      ember.position.set(sx, gy + H * 0.26, sz);
+      holder.add(stick, ember);
+      add(holder, () => {});
+
+      const puff = new THREE.SphereGeometry(1, 7, 6);
+      const s2 = swarm(puff, [C.smoke], 170,
+        () => {
+          const t = Math.random();                 // scatter along the column
+          return { a: rnd(0, 6.3), r: rnd(0, R * 0.02) + t * R * 0.16,
+                   t, x: sx, z: sz,
+                   y: gy + H * (0.26 + t * 1.05),
+                   s: R * (0.018 + t * 0.075) };
+        },
         (b, dt) => {
-          b.y += dt * H * 0.30;
-          b.a += dt * 1.5;
-          b.r += dt * R * 0.09;
-          b.s += dt * R * 0.05;
-          b.x = R * 0.72 + Math.cos(b.a) * b.r;
-          b.z = R * 0.30 + Math.sin(b.a) * b.r;
-          b.rz += dt * 0.5;
-          if (b.y > H * 1.5) { b.y = H * 0.24; b.r = rnd(0, R * 0.05); b.s = R * 0.03; }
+          b.y += dt * H * 0.24;
+          b.a += dt * 1.1;
+          b.r += dt * R * 0.055;
+          b.s += dt * R * 0.030;
+          b.x = sx + Math.cos(b.a) * b.r;
+          b.z = sz + Math.sin(b.a) * b.r;
+          if (b.y > gy + H * 1.35) {
+            b.y = gy + H * 0.27; b.r = rnd(0, R * 0.02);
+            b.s = R * 0.018; b.a = rnd(0, 6.3);
+          }
         });
-      s.holder.children.forEach(m => {
-        m.material.transparent = true; m.material.opacity = 0.16;
+      s2.holder.children.forEach(m => {
+        m.material.transparent = true;
+        m.material.opacity = 0.085;
         m.material.depthWrite = false;
       });
-      add(s.holder, dt => s.tick(dt));
+      add(s2.holder, dt => s2.tick(dt));
     } },
 
-    { view: [0.3, 1.30, 0.95], hold: 5.0, run() {           // 12 Dipa
-      meru.setKeyLight?.(0.22);            // let the flame do the lighting
+    { view: [0.3, 1.24, 0.98], hold: 6.0, run() {           // 12 Dipa
+      meru.setKeyLight?.(0.18);            // let the flame do the lighting
       const lamp = new THREE.Group();
+      // A diya is a shallow dish pinched to a lip, not half a ball. Turned
+      // from a profile so it reads as a vessel from any angle.
       const dish = new THREE.Mesh(
-        new THREE.SphereGeometry(R * 0.055, 16, 10, 0, 6.3, Math.PI / 2, Math.PI / 2),
-        new THREE.MeshStandardMaterial({ color: C.brass, metalness: 0.9, roughness: 0.3 }));
+        new THREE.LatheGeometry([
+          [0.00, 0.00], [0.42, 0.00], [0.68, 0.05], [0.86, 0.17],
+          [0.92, 0.30], [0.88, 0.34], [0.78, 0.24], [0.60, 0.13],
+          [0.30, 0.08], [0.00, 0.07],
+        ].map(([x, y]) => new THREE.Vector2(x * R * 0.115, y * R * 0.115)), 28),
+        new THREE.MeshStandardMaterial({
+          color: C.brass, metalness: 0.95, roughness: 0.28,
+          side: THREE.DoubleSide }));
       const ghee = new THREE.Mesh(
-        new THREE.CircleGeometry(R * 0.048, 20), matt(C.ghee, 1, 0.4));
-      ghee.rotation.x = -Math.PI / 2; ghee.position.y = R * 0.006;
+        new THREE.CircleGeometry(R * 0.078, 24), matt(C.ghee, 1, 0.25));
+      ghee.rotation.x = -Math.PI / 2;
+      ghee.position.y = R * 0.020;
+      const wick = new THREE.Mesh(
+        new THREE.CylinderGeometry(R * 0.005, R * 0.006, R * 0.030, 6),
+        matt(0x4a3a28));
+      wick.position.set(R * 0.055, R * 0.028, 0);
+      wick.rotation.z = 0.5;
+      // teardrop flame, also a lathe, with a brighter core inside it
+      const flameProfile = n => [
+        [0.00, 0.00], [0.36, 0.16], [0.42, 0.40], [0.30, 0.68],
+        [0.13, 0.88], [0.00, 1.00],
+      ].map(([x, y]) => new THREE.Vector2(x * n, y * n));
       const flame = new THREE.Mesh(
-        new THREE.ConeGeometry(R * 0.020, R * 0.075, 10),
-        new THREE.MeshBasicMaterial({ color: C.flame }));
-      flame.position.y = R * 0.045;
-      const light = new THREE.PointLight(C.flame, 22, R * 5, 2);
-      light.position.y = R * 0.05;
-      lamp.add(dish, ghee, flame, light);
+        new THREE.LatheGeometry(flameProfile(R * 0.085), 18),
+        new THREE.MeshBasicMaterial({ color: 0xffa733, transparent: true, opacity: 0.85 }));
+      const core = new THREE.Mesh(
+        new THREE.LatheGeometry(flameProfile(R * 0.048), 14),
+        new THREE.MeshBasicMaterial({ color: 0xfff0c0 }));
+      flame.position.set(R * 0.072, R * 0.038, 0);
+      core.position.set(R * 0.072, R * 0.040, 0);
+      const light = new THREE.PointLight(C.flame, 26, R * 6, 2);
+      light.position.set(R * 0.072, R * 0.075, 0);
+      lamp.add(dish, ghee, wick, flame, core, light);
       add(lamp, (dt, age) => {
-        const a = -age * 1.05;                      // keep it to the right
-        lamp.position.set(Math.cos(a) * R * 0.92,
-                          H * (0.40 + 0.22 * Math.sin(age * 1.7)),
-                          Math.sin(a) * R * 0.92);
-        const f = 0.85 + 0.15 * Math.sin(age * 19) + 0.06 * Math.sin(age * 7);
+        const a = -age * 0.95;                      // keep it to the right
+        lamp.position.set(Math.cos(a) * R * 1.00,
+                          H * (0.42 + 0.20 * Math.sin(age * 1.5)),
+                          Math.sin(a) * R * 1.00);
+        lamp.rotation.y = -a + Math.PI / 2;         // the lip leads the way
+        const f = 0.86 + 0.14 * Math.sin(age * 21) + 0.06 * Math.sin(age * 8.3);
         flame.scale.set(1, f, 1);
-        light.intensity = 22 * f;
+        core.scale.set(1, f * 0.96, 1);
+        light.intensity = 26 * f;
       });
     } },
 
-    { view: [0, 1.32, 1.05], hold: 3.2, run() {             // 13 Naivedya
+    { view: [0, 1.20, 0.88], hold: 3.6, run() {             // 13 Naivedya
+      // These were half-spheres placed with their centre on the surface, so
+      // the bowl was buried and only its dome showed - a ball stuck in the
+      // mountain. A lathed katori stands on its own base at ground level.
+      const bowlProfile = [
+        [0.00, 0.00], [0.30, 0.00], [0.36, 0.06], [0.62, 0.22],
+        [0.78, 0.46], [0.82, 0.60], [0.76, 0.60], [0.72, 0.46],
+        [0.56, 0.24], [0.28, 0.10], [0.00, 0.08],
+      ];
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2;
-        const x = Math.cos(a) * R * 0.92, z = Math.sin(a) * R * 0.92;
+        const x = Math.cos(a) * R * 0.80, z = Math.sin(a) * R * 0.80;
         const g = new THREE.Group();
+        const n = R * 0.185;
         const bowl = new THREE.Mesh(
-          new THREE.SphereGeometry(R * 0.062, 18, 12, 0, 6.3, Math.PI / 2, Math.PI / 2),
-          new THREE.MeshStandardMaterial({ color: C.brass, metalness: 0.85, roughness: 0.35 }));
+          new THREE.LatheGeometry(
+            bowlProfile.map(([u, v]) => new THREE.Vector2(u * n, v * n)), 26),
+          new THREE.MeshStandardMaterial({
+            color: C.brass, metalness: 0.92, roughness: 0.3,
+            side: THREE.DoubleSide }));
         const heap = new THREE.Mesh(
-          new THREE.SphereGeometry(R * 0.050, 16, 10, 0, 6.3, 0, Math.PI / 2),
-          matt(C.food, 1, 0.85));
-        heap.position.y = R * 0.004;
+          new THREE.SphereGeometry(n * 0.62, 18, 12, 0, 6.3, 0, Math.PI / 2),
+          matt(C.food, 1, 0.9));
+        heap.position.y = n * 0.34;
         g.add(bowl, heap);
-        g.position.set(x, ground(x, z), z);
+        g.position.set(x, ground(x, z), z);     // base on the terrace
         g.scale.setScalar(0.01);
         add(g, (dt, age) =>
-          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.14) / 0.5))));
+          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.13) / 0.5))));
       }
     } },
 
-    { view: [0, 1.32, 1.05], hold: 3.0, run() {             // 14 Tambula
+    { view: [0.5, 1.20, 0.88], hold: 3.4, run() {           // 14 Tambula
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
-        const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;
+        const x = Math.cos(a) * R * 0.80, z = Math.sin(a) * R * 0.80;
         const g = new THREE.Group();
-        for (let j = 0; j < 2; j++) {
-          const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.6));
-          leaf.scale.setScalar(R * 0.10);
-          leaf.rotation.set(-Math.PI / 2, 0, j * 0.7 - 0.35);
+        for (let j = 0; j < 3; j++) {
+          const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.55));
+          leaf.scale.setScalar(R * 0.21);
+          leaf.rotation.set(-Math.PI / 2 + 0.06, 0, (j - 1) * 0.42);
           leaf.position.y = R * 0.004 * j;
           g.add(leaf);
         }
         const nut = new THREE.Mesh(
-          new THREE.SphereGeometry(R * 0.016, 10, 8), matt(0xb5651d));
-        nut.position.set(0, R * 0.014, R * 0.02);
+          new THREE.SphereGeometry(R * 0.032, 14, 10), matt(0xa9541c, 1, 0.6));
+        nut.scale.set(1, 0.75, 1);
+        nut.position.set(0, R * 0.026, R * 0.055);
         g.add(nut);
-        g.position.set(x, ground(x, z), z);
+        g.position.set(x, ground(x, z) + R * 0.004, z);
         g.rotation.y = -a;
         g.scale.setScalar(0.01);
         add(g, (dt, age) =>
-          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.14) / 0.5))));
+          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.13) / 0.5))));
       }
     } },
 
-    { view: null, hold: 9.6, run() { meru.circumambulate(9000); } },   // 15
+    { view: [0, 1.40, 1.02], hold: 11.5, run() {            // 15 Pradakshina
+      // Orbiting an object against an empty background reads as the object
+      // turning, not as you walking - there is nothing to have parallax
+      // against. So the path gets lamps standing on it. They stay put, the
+      // camera passes them, and the motion becomes yours.
+      const n = 12, rad = R * 1.42;
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        const g = new THREE.Group();
+        const cup = new THREE.Mesh(
+          new THREE.LatheGeometry([
+            [0.00, 0.00], [0.34, 0.00], [0.52, 0.10], [0.56, 0.22],
+            [0.50, 0.22], [0.44, 0.11], [0.24, 0.05], [0.00, 0.04],
+          ].map(([u, v]) => new THREE.Vector2(u * R * 0.13, v * R * 0.13)), 18),
+          new THREE.MeshStandardMaterial({
+            color: C.brass, metalness: 0.9, roughness: 0.35,
+            side: THREE.DoubleSide }));
+        const fl = new THREE.Mesh(
+          new THREE.SphereGeometry(R * 0.016, 10, 8),
+          new THREE.MeshBasicMaterial({ color: 0xffc25e }));
+        fl.scale.set(1, 1.7, 1);
+        fl.position.y = R * 0.030;
+        const li = new THREE.PointLight(0xffb347, 3.2, R * 1.4, 2);
+        li.position.y = R * 0.035;
+        g.add(cup, fl, li);
+        g.position.set(Math.cos(a) * rad, 0, Math.sin(a) * rad);
+        g.scale.setScalar(0.01);
+        add(g, (dt, age) => {
+          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.05) / 0.4)));
+          fl.scale.set(1, 1.7 * (0.85 + 0.15 * Math.sin(age * 17 + k)), 1);
+        });
+      }
+      // a floor to walk on, so the lamps are standing on something
+      const floor = new THREE.Mesh(
+        new THREE.RingGeometry(R * 1.18, R * 1.72, 96),
+        matt(0x2a251d, 0.9, 0.95));
+      floor.rotation.x = -Math.PI / 2;
+      floor.position.y = -0.002;
+      add(floor, () => {});
+      setTimeout(() => meru.circumambulate(9200), 700);
+    } },
+
     { view: null, hold: 4.0, run() { meru.bow(3400); } },              // 16
   ];
 
