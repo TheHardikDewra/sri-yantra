@@ -8,21 +8,33 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 // How far the plan view stops short of straight down. See minPolarAngle below.
 const TOP_PHI = 0.035;
 
+// What Merus are actually made of: gold (svarna, or gold-plated), brass
+// (pital, and the panchaloha temple alloy), copper (tamra, the everyday
+// yantra metal), stone, and sphatika - rock crystal, which tradition holds
+// highest for a Maha Meru. Nothing else; "ink" was an invention and is gone.
+//
 // A metal is almost entirely reflection, so without an environment to reflect
 // it renders nearly black however many lamps are pointed at it. The scene gets
 // a generated room environment for that; the lights below only shape it.
 // Metalness near 1 goes further and makes the surface almost pure reflection,
 // which turns muddy brown whatever the base colour is, so these sit at about
 // half metal: it reads as metal and keeps the terraces legible.
+//
+// Every entry is applied over these defaults, so switching away from the
+// crystal always clears its transmission.
+const MAT_DEFAULTS = { transmission: 0, thickness: 0, ior: 1.5, clearcoat: 0 };
 export const MATERIALS = {
-  gold:  { color: 0xd9a527, metalness: 0.62, roughness: 0.28,
-           envMapIntensity: 0.95 },
-  brass: { color: 0xd8ac52, metalness: 0.45, roughness: 0.34,
-           envMapIntensity: 1.1 },
-  stone: { color: 0xcac2b2, metalness: 0.0, roughness: 0.9,
-           envMapIntensity: 0.9 },
-  ink:   { color: 0x46433c, metalness: 0.2, roughness: 0.6,
-           envMapIntensity: 0.9 },
+  gold:     { color: 0xd9a527, metalness: 0.62, roughness: 0.28,
+              envMapIntensity: 0.95 },
+  brass:    { color: 0xd8ac52, metalness: 0.45, roughness: 0.34,
+              envMapIntensity: 1.1 },
+  copper:   { color: 0xc2703f, metalness: 0.62, roughness: 0.30,
+              envMapIntensity: 1.0 },
+  stone:    { color: 0xcac2b2, metalness: 0.0, roughness: 0.9,
+              envMapIntensity: 0.9 },
+  sphatika: { color: 0xeef3f6, metalness: 0.0, roughness: 0.06,
+              envMapIntensity: 1.2,
+              transmission: 0.92, thickness: 0.9, ior: 1.55 },
 };
 
 export function mount(canvas, url) {
@@ -131,6 +143,7 @@ export function mount(canvas, url) {
 
   canvas.addEventListener('pointerdown', () => {
     state.glide = null;
+    state.cancelWalk?.();
     state.touched = true;      // stop reframing once they have taken the wheel
   });
 
@@ -148,32 +161,42 @@ export function mount(canvas, url) {
     // terrace tops and z-fighting swallows them, which is precisely the view
     // where they carry the whole read. Push the solid back a hair so the lines
     // always win.
-    mesh.material = new THREE.MeshStandardMaterial(
+    // A physical material so sphatika can transmit; for the metals and stone
+    // the defaults zero the transmission and it behaves as standard.
+    mesh.material = new THREE.MeshPhysicalMaterial(
       Object.assign({
         flatShading: true,
         polygonOffset: true,
         polygonOffsetFactor: 1,
         polygonOffsetUnits: 1,
-      }, MATERIALS.gold));
+      }, MAT_DEFAULTS, MATERIALS.gold));
     scene.add(mesh);
     state.mesh = mesh;
 
     // Frame the mountain from its own size. The home view looks straight down
     // the figure's mirror plane, so the Meru reads dead square rather than at
-    // some arbitrary angle.
+    // some arbitrary angle. The numbers put the apex ~8% from the top of the
+    // frame and leave a visible band of ground below the plinth, at any
+    // aspect the layout produces.
     const size = bb.getSize(new THREE.Vector3());
     const reach = Math.max(size.x, size.z) * 0.5;
-    controls.target.set(0, size.y * 0.38, 0);
+    state.ty0 = size.y * 0.27;
+    controls.target.set(0, state.ty0, 0);
 
     // Distance has to come from the viewport, not a constant: the field of
     // view is vertical, so a tall narrow canvas crops the mountain sideways
     // while a wide one leaves it swimming. Fit both axes and take the looser.
     state.fit = () => {
       const t = Math.tan((camera.fov * Math.PI / 180) / 2);
-      const dV = size.y * 0.60 / t;
+      const dV = size.y * 0.69 / t;
       const dH = reach * 1.08 / (t * Math.max(0.2, camera.aspect));
-      return Math.max(dV, dH) * 1.16;
+      return Math.max(dV, dH) * 1.26;
     };
+    // fit() reads camera.aspect, and in a tab that has never painted (hidden,
+    // or below the fold) no resize has run yet and the aspect is still the
+    // constructor's 1 - which zooms the whole framing out by a third. Run the
+    // resize pass first, so the framing is computed from the real canvas.
+    resize();
     state.home = new THREE.Spherical(state.fit(), Math.PI * 0.335, 0);
     place(state.home);
     controls.update();
@@ -189,9 +212,7 @@ export function mount(canvas, url) {
       const edges = new THREE.LineSegments(
         new THREE.EdgesGeometry(geo, 24),
         new THREE.LineBasicMaterial({
-          color: state.material === 'ink' ? 0xbbb1a0 : 0x000000,
-          transparent: true,
-          opacity: state.material === 'ink' ? 0.45 : 0.42,
+          color: 0x000000, transparent: true, opacity: 0.42,
         }));
       edges.visible = state.edgesWanted !== false;
       scene.add(edges);
@@ -206,24 +227,52 @@ export function mount(canvas, url) {
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
     if (!w || !h) return;
-    if (canvas.width !== w * renderer.getPixelRatio()) {
+    if (canvas.width !== Math.floor(w * renderer.getPixelRatio())) {
       renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-      if (state.fit) {
-        state.home.radius = state.fit();
-        controls.minDistance = state.home.radius * 0.45;
-        controls.maxDistance = state.home.radius * 2.10;
-        // reframe only while the viewer has left the camera alone
-        if (!state.touched && !state.glide) place(state.home);
-      }
+    }
+    const aspect = w / h;
+    if (Math.abs(camera.aspect - aspect) < 1e-6) return;
+    camera.aspect = aspect;
+    camera.updateProjectionMatrix();
+    if (state.fit && state.home) {
+      state.home.radius = state.fit();
+      controls.minDistance = state.home.radius * 0.45;
+      controls.maxDistance = state.home.radius * 2.10;
+      // reframe only while the viewer has left the camera alone
+      if (!state.touched && !state.glide && !state.walking) place(state.home);
     }
   }
 
   (function loop() {
     requestAnimationFrame(loop);
     resize();
-    if (state.glide) {
+    if (state.walking) {
+      // Walking, not orbiting: the camera moves along the path looking AHEAD,
+      // with the mountain held on its right - which is what pradakshina is.
+      // Staring at the centre while translating reads as the object turning.
+      const w = state.walking;
+      const k = Math.min(1, (performance.now() - w.t0) / w.ms);
+      const r0 = 0.09;      // trapezoid speed: ease in, walk steady, ease out
+      const e = k < r0 ? (k * k) / (2 * r0 * (1 - r0))
+        : k > 1 - r0 ? 1 - ((1 - k) * (1 - k)) / (2 * r0 * (1 - r0))
+        : (k - r0 / 2) / (1 - r0);
+      const a = w.a0 + Math.PI * 2 * e;
+      const bob = Math.sin(e * Math.PI * 2 * 24) * w.eye * 0.012;   // footfall
+      camera.position.set(Math.cos(a) * w.rad, w.eye + bob,
+                          Math.sin(a) * w.rad);
+      controls.target.set(
+        Math.cos(a) * (w.rad - w.pull) - Math.sin(a) * w.look,
+        w.eye * 0.92,
+        Math.sin(a) * (w.rad - w.pull) + Math.cos(a) * w.look);
+      camera.lookAt(controls.target);
+      if (k >= 1) {
+        const theta = Math.PI / 2 - w.a0;
+        state.walking = null;
+        controls.enabled = true;
+        controls.target.set(0, state.ty0 ?? 0, 0);
+        glideTo(theta, 1.38, state.home.radius * 1.02, 800);
+      }
+    } else if (state.glide) {
       const g = state.glide;
       const k = Math.min(1, (performance.now() - g.t0) / g.ms);
       const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
@@ -234,21 +283,17 @@ export function mount(canvas, url) {
       if (k >= 1) state.glide = null;
     }
     state.puja?.tick();
-    controls.update();
+    if (!state.walking) controls.update();
     renderer.render(scene, camera);
   })();
 
   state.setMaterial = name => {
     state.material = name;
     if (!state.mesh) return;
-    Object.assign(state.mesh.material, MATERIALS[name]);
+    Object.assign(state.mesh.material, MAT_DEFAULTS, MATERIALS[name]);
     state.mesh.material.color = new THREE.Color(MATERIALS[name].color);
     state.mesh.material.envMapIntensity = MATERIALS[name].envMapIntensity;
     state.mesh.material.needsUpdate = true;
-    if (!state.edges) return;
-    state.edges.material.color = new THREE.Color(
-      name === 'ink' ? 0xbbb1a0 : 0x000000);
-    state.edges.material.opacity = name === 'ink' ? 0.45 : 0.42;
   };
   state.setWireframe = on => {
     if (state.mesh) state.mesh.material.wireframe = on;
@@ -267,12 +312,14 @@ export function mount(canvas, url) {
   state.view = which => {
     if (!state.home) return;
     state.touched = false;
+    state.cancelWalk?.();
     const top = which === 'top';
     // Seen from above the footprint is square and the framing that suits the
-    // three-quarter view crops it, so the plan view stands further back.
+    // three-quarter view crops it, so the plan view stands a little further
+    // back - just enough that the bhupura corners keep a small margin.
     glideTo(state.home.theta,
             top ? TOP_PHI : state.home.phi,
-            state.home.radius * (top ? 1.42 : 1), 750);
+            state.home.radius * (top ? 1.07 : 1), 750);
   };
   // A free look, for the puja: theta and phi absolute, radius as a multiple of
   // the framed distance.
@@ -297,12 +344,30 @@ export function mount(canvas, url) {
   state.reset = () => state.view('front');
   state.squareUp = squareUp;
 
-  // Pradakshina: one full turn, kept to the right. Clockwise seen from above
-  // means the figure stays on the walker's right, which is the whole point of
-  // the rite, so the azimuth decreases.
-  // phi is passed rather than read: the circuit starts while the move into
-  // position is still gliding, and here() would catch it half way and walk the
-  // circle at whatever angle it happened to be passing through.
+  // Pradakshina: one full turn on foot, kept to the right. The camera is
+  // placed ON the path at eye height and aimed along it - mostly ahead, a
+  // little inward - so the Meru rides on the walker's right and the lamps
+  // stream past. Decreasing OrbitControls-theta is increasing plan angle,
+  // which is clockwise seen from above: the deity stays on the right hand.
+  state.walkCircuit = (ms = 9200, rad = 1, eye = 1) => {
+    if (!state.home) return;
+    const s0 = here();
+    state.cancelWalk();
+    controls.enabled = false;
+    state.glide = null;
+    state.walking = {
+      t0: performance.now(), ms, rad, eye,
+      look: rad * 0.62, pull: rad * 0.30,
+      a0: Math.PI / 2 - s0.theta,
+    };
+  };
+  state.cancelWalk = () => {
+    if (!state.walking) return;
+    state.walking = null;
+    controls.enabled = true;
+    controls.target.set(0, state.ty0 ?? 0, 0);
+  };
+  // kept for anything that still wants the old turntable circuit
   state.circumambulate = (ms = 9000, phi = null, mul = null) => {
     const s0 = here();
     glideTo(s0.theta - 2 * Math.PI,
