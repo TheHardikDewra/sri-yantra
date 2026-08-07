@@ -103,11 +103,16 @@ export function mount(canvas, url) {
     camera.lookAt(controls.target);
   }
 
-  function glideTo(theta, phi, radius, ms = 650) {
+  // `wrap` folds the azimuth onto the shortest way round, which is what you
+  // want for every jump between two views. It is exactly wrong for a full
+  // circuit: a turn of -2pi folds to 0 and the move silently does nothing.
+  function glideTo(theta, phi, radius, ms = 650, wrap = true) {
     const from = here();
     let d = theta - from.theta;
-    while (d > Math.PI) d -= 2 * Math.PI;      // take the short way round
-    while (d < -Math.PI) d += 2 * Math.PI;
+    if (wrap) {
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+    }
     state.glide = {
       from, to: { theta: from.theta + d, phi, radius },
       t0: performance.now(), ms,
@@ -272,7 +277,7 @@ export function mount(canvas, url) {
   // the rite, so the azimuth decreases.
   state.circumambulate = (ms = 9000) => {
     const s0 = here();
-    glideTo(s0.theta - 2 * Math.PI, s0.phi, s0.radius, ms);
+    glideTo(s0.theta - 2 * Math.PI, s0.phi, s0.radius, ms, false);
   };
   // Namaskara: down to the ground and back up.
   state.bow = (ms = 3400) => {
