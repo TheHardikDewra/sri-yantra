@@ -251,28 +251,44 @@ export function mount(canvas, url) {
       // Walking, not orbiting: the camera moves along the path looking AHEAD,
       // with the mountain held on its right - which is what pradakshina is.
       // Staring at the centre while translating reads as the object turning.
+      // It BLENDS onto the path first: teleporting to the start pose is a cut.
       const w = state.walking;
-      const k = Math.min(1, (performance.now() - w.t0) / w.ms);
-      const r0 = 0.09;      // trapezoid speed: ease in, walk steady, ease out
-      const e = k < r0 ? (k * k) / (2 * r0 * (1 - r0))
-        : k > 1 - r0 ? 1 - ((1 - k) * (1 - k)) / (2 * r0 * (1 - r0))
-        : (k - r0 / 2) / (1 - r0);
-      const a = w.a0 + Math.PI * 2 * e;
-      const bob = Math.sin(e * Math.PI * 2 * 20) * w.eye * 0.008;   // footfall
-      camera.position.set(Math.cos(a) * w.rad, w.eye + bob,
-                          Math.sin(a) * w.rad);
-      controls.target.set(
-        Math.cos(a) * (w.rad - w.pull) - Math.sin(a) * w.look,
-        w.eye * 0.92,
-        Math.sin(a) * (w.rad - w.pull) + Math.cos(a) * w.look);
-      camera.lookAt(controls.target);
-      if (k >= 1) {
-        const theta = Math.PI / 2 - w.a0;
-        state.walking = null;
-        controls.enabled = true;
-        glideTarget(900);
-        glideTo(theta, 1.38, state.home.radius * 1.02, 900);
+      const now = performance.now();
+      const pose = e2 => {
+        const a = w.a0 + Math.PI * 2 * e2;
+        const bob = e2 > 0 && e2 < 1
+          ? Math.sin(e2 * Math.PI * 2 * 20) * w.eye * 0.008 : 0;
+        return [new THREE.Vector3(Math.cos(a) * w.rad, w.eye + bob,
+                                  Math.sin(a) * w.rad),
+                new THREE.Vector3(
+                  Math.cos(a) * (w.rad - w.pull) - Math.sin(a) * w.look,
+                  w.eye * 0.92,
+                  Math.sin(a) * (w.rad - w.pull) + Math.cos(a) * w.look)];
+      };
+      if (now < w.t0 + w.blendMs) {
+        const k = (now - w.t0) / w.blendMs;
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        const [p, tgt] = pose(0);
+        camera.position.copy(w.p0).lerp(p, e);
+        controls.target.copy(w.tg0).lerp(tgt, e);
+      } else {
+        const k = Math.min(1, (now - w.t0 - w.blendMs) / w.ms);
+        const r0 = 0.09;    // trapezoid speed: ease in, walk steady, ease out
+        const e = k < r0 ? (k * k) / (2 * r0 * (1 - r0))
+          : k > 1 - r0 ? 1 - ((1 - k) * (1 - k)) / (2 * r0 * (1 - r0))
+          : (k - r0 / 2) / (1 - r0);
+        const [p, tgt] = pose(e);
+        camera.position.copy(p);
+        controls.target.copy(tgt);
+        if (k >= 1) {
+          const theta = Math.PI / 2 - w.a0;
+          state.walking = null;
+          controls.enabled = true;
+          glideTarget(900);
+          glideTo(theta, 1.38, state.home.radius * 1.02, 900);
+        }
       }
+      if (state.walking) camera.lookAt(controls.target);
     } else if (state.glide) {
       const g = state.glide;
       const k = Math.min(1, (performance.now() - g.t0) / g.ms);
@@ -368,6 +384,9 @@ export function mount(canvas, url) {
       t0: performance.now(), ms, rad, eye,
       look: rad * 0.45, pull: rad * 0.42,
       a0: Math.PI / 2 - s0.theta,
+      blendMs: 1100,
+      p0: camera.position.clone(),
+      tg0: controls.target.clone(),
     };
   };
   function glideTarget(ms = 700) {

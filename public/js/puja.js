@@ -233,6 +233,14 @@ export function createPuja(meru) {
     return 0;
   }
 
+  // Where a named tier tops out - act placement derives from the shipped
+  // profile, never from remembered heights, so a re-proportioned solver
+  // cannot strand an offering in the air.
+  const tierZ = name => {
+    const q = prof && prof.tiers.find(x => x.name === name);
+    return q ? q.z : null;
+  };
+
   // How far out the solid reaches at a given height, along a given bearing.
   // Cloth and thread have to lie ON the mountain; a radius picked by eye cuts
   // straight through it, which is what was happening.
@@ -593,8 +601,13 @@ export function createPuja(meru) {
       // way down, the hem flares and settles just above the plinth, and the
       // whole sheet breathes. A gold cord with a knot and two tails ties it.
       const NA2 = 220, NV = 26;
-      const tieY = 0.700, hemY = 0.335;
-      const rTop = radiusAt(tieY, 0) + R * 0.020;
+      const hemY = (prof && prof.bhupura ? prof.bhupura.z[2] : 0.31) + 0.03;
+      const tieY = (tierZ('lotus16') ?? 0.70) - 0.016;
+      let rBase = 0;
+      if (prof) for (const q of prof.tiers)
+        if (q.z <= tieY + 0.02) for (const rr of q.r)
+          if (rr > rBase) rBase = rr;
+      const rTop = (rBase || Math.SQRT2) + R * 0.020;
       const geom = new THREE.BufferGeometry();
       const pos = new Float32Array((NA2 + 1) * NV * 3);
       const idx = [];
@@ -680,11 +693,15 @@ export function createPuja(meru) {
       // little free on the other. It arrives the way a garland is offered -
       // already formed, lowered on from above, pressed, and settled.
       const N = 300, EPS = R * 0.0062;
+      // the shoulder rides the upper triangle tiers, wherever they now are
+      const yHigh = ((tierZ('ashtakona') ?? H * 0.78)
+                   + (tierZ('antardasara') ?? H * 0.66)) / 2;
+      const yLow = H * 0.24;
       const centre = [], tang = [];
       for (let i = 0; i <= N; i++) {
         const a = (i / N) * Math.PI * 2;
         const s = Math.sin(a / 2) ** 2;
-        const y = H * (0.86 - 0.62 * s) - H * 0.02 * Math.sin(Math.PI * s);
+        const y = yHigh - (yHigh - yLow) * s - H * 0.02 * Math.sin(Math.PI * s);
         const rad = radiusAt(y, a) + R * 0.050 + R * 0.075 * s * s;
         centre.push(new THREE.Vector3(
           Math.cos(a) * rad, y, Math.sin(a) * rad));
@@ -739,15 +756,18 @@ export function createPuja(meru) {
       // Sandal paste the way it is actually worn: three strokes wiped across
       // the front of the drum, and a round kumkum mark above them. Marks,
       // not speckles.
-      const drumR = radiusAt(H * 0.22, 0);
+      const drumTop = tierZ('trivritta') ?? 0.39;
+      const drumBase = (prof && prof.bhupura ? prof.bhupura.z[2] : 0.27);
+      const band = y => drumBase + (drumTop - drumBase) * y;
+      const drumR = radiusAt(band(0.5), 0);
       const ARC = 1.05;
       for (let k = 0; k < 3; k++) {
         const stroke = new THREE.Mesh(
-          new THREE.TorusGeometry(drumR + R * 0.006, R * 0.011, 8, 72, ARC),
+          new THREE.TorusGeometry(drumR + R * 0.006, R * 0.008, 8, 72, ARC),
           matt(C.sandal, 1, 0.9));
         // lie flat, then swing the arc's middle round to the front (+z)
         stroke.rotation.set(Math.PI / 2, ARC / 2 - Math.PI / 2, 0, 'YXZ');
-        stroke.position.y = 0.44 + k * 0.085;
+        stroke.position.y = band(0.22 + k * 0.25);
         const g0 = stroke.geometry;
         g0.setDrawRange(0, 0);
         add(stroke, (dt, age) => {
@@ -756,9 +776,9 @@ export function createPuja(meru) {
         });
       }
       const dot = new THREE.Mesh(
-        new THREE.CircleGeometry(R * 0.045, 24),
+        new THREE.CircleGeometry(R * 0.030, 24),
         matt(0xb3202c, 1, 0.85));
-      dot.position.set(0, 0.685, drumR + R * 0.010);
+      dot.position.set(0, band(0.92), drumR + R * 0.010);
       dot.scale.setScalar(0.01);
       add(dot, (dt, age) =>
         dot.scale.setScalar(ease(Math.min(1, Math.max(0, age - 2.1) / 0.5))));
