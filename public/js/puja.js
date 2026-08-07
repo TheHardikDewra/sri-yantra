@@ -290,7 +290,7 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0, 0.95, 1.18], hold: 3.2, run() {             // 2 Asana
+    { view: [0, 0.66, 1.30], hold: 3.2, run() {             // 2 Asana
       // A lotus seat laid round the base. It has to sit ON the bhupura, not
       // at a radius picked by eye - the gated square reaches 1.80 along the
       // axes and 2.07 into the corners, so anything fixed floats off one and
@@ -299,7 +299,7 @@ export function createPuja(meru) {
       const s1 = swarm(geo.petal, [BLOOM[0], BLOOM[3], BLOOM[2]], n,
         i => {
           const a = (i / n) * Math.PI * 2;
-          const r = R * 0.94;
+          const r = R * 0.88;
           const x = Math.cos(a) * r, z = Math.sin(a) * r;
           return { a, x, z, y: ground(x, z) + R * 0.008,
                    rx: -Math.PI / 2, ry: 0, rz: -a - Math.PI / 2,
@@ -310,8 +310,8 @@ export function createPuja(meru) {
         });
       add(s1.holder, (dt, age) => s1.tick(dt, age));
 
-      const seat = ring(R * 0.94, 0, C.sandal, R * 0.012);
-      seat.position.y = ground(R * 0.94, 0) + R * 0.003;
+      const seat = ring(R * 0.88, 0, C.sandal, R * 0.014);
+      seat.position.y = ground(R * 0.88, 0) + R * 0.004;
       seat.scale.setScalar(0.01);
       add(seat, (dt, age) => seat.scale.setScalar(ease(Math.min(1, age / 0.8))));
     } },
@@ -582,7 +582,7 @@ export function createPuja(meru) {
       });
     } },
 
-    { view: [0, 0.92, 1.20], hold: 3.8, run() {             // 13 Naivedya
+    { view: [0, 0.66, 1.30], hold: 3.8, run() {             // 13 Naivedya
       // These were half-spheres placed with their centre on the surface, so
       // the bowl was buried and only its dome showed - a ball stuck in the
       // mountain. A lathed katori stands on its own base at ground level.
@@ -593,7 +593,7 @@ export function createPuja(meru) {
       ];
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2;
-        const x = Math.cos(a) * R * 1.02, z = Math.sin(a) * R * 1.02;   // in the gate mouths
+        const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;   // on the bhupura
         const g = new THREE.Group();
         const n = R * 0.22;
         const bowl = new THREE.Mesh(
@@ -614,10 +614,10 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0.5, 0.92, 1.20], hold: 3.6, run() {           // 14 Tambula
+    { view: [0.5, 0.66, 1.30], hold: 3.6, run() {           // 14 Tambula
       for (let k = 0; k < 4; k++) {
         const a = k * Math.PI / 2 + Math.PI / 4;
-        const x = Math.cos(a) * R * 0.96, z = Math.sin(a) * R * 0.96;
+        const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;
         const g = new THREE.Group();
         for (let j = 0; j < 3; j++) {
           const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.55));
