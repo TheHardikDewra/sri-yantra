@@ -1,5 +1,7 @@
 # Śrī Yantra, solved exactly
 
+**Live: [sriyantra.vercel.app](https://sriyantra.vercel.app)**
+
 The Śrī Yantra is nine isosceles triangles sharing one vertical axis. Drawing
 nine triangles is easy. Drawing them so that every intersection lands where
 tradition says it lands is not — it is a non-linear system with no
@@ -130,8 +132,29 @@ no polygon arithmetic.
 
 All ten outlines turn out to be star-shaped about the centre, so each is stored
 as a radius r(θ) and the solid is a staircase profile swept round the axis.
-`check_watertight()` confirms every edge is shared by exactly two triangles,
-once in each direction, so the STL slices and prints without repair.
+
+Several tiers touch their neighbour exactly - the chaturdaśāra reaches r = 1 at
+the base corners of t₃ and t₇, which lie on E by condition (i), and every lotus
+petal returns to its base circle at each cusp. Those tangencies are correct in
+the plane but give the solid a wall of zero width, which exports as a zero-area
+facet and breaks the shell, so each tier is forced strictly inside the one below
+it by 6e-5 of the model's width.
+
+`check_stl()` then re-reads the written file and checks **the export, not the
+mesh**: STL stores float32, so vertices differing in the twelfth decimal weld
+together on write. The build fails if any of these regress:
+
+```
+the written STL, checked as a file:
+  [ok] file size consistent
+  [ok] no degenerate facets
+  [ok] every edge shared by exactly two facets
+  [ok] every directed edge traversed once
+  [ok] every directed edge has an opposite
+  [ok] Euler V-E+F == 2
+  [ok] volume positive, so normals face out
+VERDICT: PASS
+```
 
 The 3D view is clamped above the horizon. An inverted Śrī Yantra is a different
 figure — the Śiva yantra of kāpālika practice — so the Meru is only ever shown

@@ -31,6 +31,14 @@ from arrangement import segments, _inside
 from build import LAYOUT, _polar, bhupura_points
 
 
+# How far either side of a corner bearing an extra ray is fired, and the
+# closest two rays are ever allowed to be. CORNER_NUDGE must stay comfortably
+# above MIN_GAP or the pair straddling a corner gets thinned back to one.
+CORNER_NUDGE = 2e-4
+MIN_GAP = 2e-5
+MIN_WALL = 2e-4
+
+
 def _tri_depth(tris, p):
     return sum(1 for i in tris if _inside(tris[i], p))
 
@@ -147,10 +155,35 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
     for (p1, p2, _, _) in segments(tris):
         for p in (p1, p2):
             a = math.atan2(p[1], p[0]) % (2 * math.pi)
-            extra += [a - 2e-5, a + 2e-5]
-    angles = sorted(set(round(a % (2 * math.pi), 9) for a in base + extra))
+            extra += [a - CORNER_NUDGE, a + CORNER_NUDGE]
+
+    # Thin out samples that sit closer together than MIN_GAP. Two rays a
+    # microradian apart give two vertices a fraction of a micron apart, which
+    # survive in float64 but collapse onto each other when the mesh is written
+    # to a float32 STL - and a collapsed vertex means a zero-area facet and a
+    # shell that no longer closes. Spacing the rays keeps the export manifold.
+    angles = []
+    for a in sorted(x % (2 * math.pi) for x in base + extra):
+        if not angles or a - angles[-1] >= MIN_GAP:
+            angles.append(a)
+    if 2 * math.pi - angles[-1] + angles[0] < MIN_GAP:
+        angles.pop()                       # the seam counts as a gap too
 
     ts = tiers(tris, (0.0, 0.0), angles)
+
+    # Force every tier strictly inside the one below it. Several tiers touch
+    # their neighbour exactly: the chaturdasara reaches r = 1 at the base
+    # corners of t3 and t7, which lie on E by condition (i), and each lotus
+    # petal returns to its base circle at every cusp. Those tangencies are
+    # correct in the plane but give the solid a wall of zero width, which
+    # exports as a zero-area facet and breaks the shell. MIN_WALL is 6e-5 of
+    # the model's width - far below anything visible or printable, and far
+    # above float32's resolution at this scale.
+    for i in range(1, len(ts)):
+        outer, inner = ts[i - 1][1], ts[i][1]
+        ts[i] = (ts[i][0], [min(r, outer[j] - MIN_WALL)
+                            for j, r in enumerate(inner)])
+
     # terrace heights: a straight-sided pyramid reads best, so step by how far
     # each outline has shrunk rather than in equal slices
     mean = [sum(rs) / len(rs) for _, rs in ts]
@@ -310,6 +343,53 @@ def write_glb(path, V, F, colour=(0.72, 0.55, 0.26, 1.0)):
         fh.write(blob)
 
 
+def check_stl(path):
+    """Re-read the written STL and check the file itself, not the mesh.
+
+    The in-memory mesh can be perfect while the export is not: STL stores
+    float32, so vertices that differ in the twelfth decimal weld together on
+    write and leave zero-area facets behind. This validates what actually ships.
+    """
+    from collections import Counter
+    d = open(path, "rb").read()
+    n = struct.unpack("<I", d[80:84])[0]
+    verts, faces = {}, []
+    for i in range(n):
+        o = 84 + i * 50
+        tri = []
+        for k in range(3):
+            p = struct.unpack("<3f", d[o + 12 + k * 12: o + 24 + k * 12])
+            verts.setdefault(p, len(verts))
+            tri.append(verts[p])
+        faces.append(tuple(tri))
+    und, dirc, vol = Counter(), Counter(), 0.0
+    for a, b, c in faces:
+        for u, v in ((a, b), (b, c), (c, a)):
+            und[(min(u, v), max(u, v))] += 1
+            dirc[(u, v)] += 1
+    for i in range(n):
+        o = 84 + i * 50
+        p = [struct.unpack("<3f", d[o + 12 + k * 12: o + 24 + k * 12])
+             for k in range(3)]
+        vol += (p[0][0] * (p[1][1] * p[2][2] - p[2][1] * p[1][2])
+                - p[0][1] * (p[1][0] * p[2][2] - p[2][0] * p[1][2])
+                + p[0][2] * (p[1][0] * p[2][1] - p[2][0] * p[1][1])) / 6.0
+    V, E, F = len(verts), len(und), len(faces)
+    return {
+        "file size consistent": len(d) == 84 + n * 50,
+        "no degenerate facets":
+            all(len(set(f)) == 3 for f in faces),
+        "every edge shared by exactly two facets":
+            all(v == 2 for v in und.values()),
+        "every directed edge traversed once":
+            all(v == 1 for v in dirc.values()),
+        "every directed edge has an opposite":
+            all((b, a) in dirc for a, b in dirc),
+        "Euler V-E+F == 2": V - E + F == 2,
+        "volume positive, so normals face out": vol > 0,
+    }
+
+
 def check_watertight(V, F):
     """Every edge must be shared by exactly two triangles, once each way."""
     from collections import Counter
@@ -347,3 +427,11 @@ if __name__ == "__main__":
     for f in ("maha-meru.glb", "maha-meru.stl"):
         p = os.path.join(OUT, f)
         print(f"wrote {f}  {os.path.getsize(p)/1e6:.2f} MB")
+
+    print("\nthe written STL, checked as a file:")
+    res = check_stl(os.path.join(OUT, "maha-meru.stl"))
+    for k, v in res.items():
+        print(f"  [{'ok' if v else 'FAIL'}] {k}")
+    print("VERDICT:", "PASS" if all(res.values()) else "FAIL")
+    if not all(res.values()):
+        raise SystemExit(1)
