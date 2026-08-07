@@ -123,13 +123,15 @@ export function createPuja(meru) {
     };
   }
 
-  // water poured from a height and running down the terraces
+  // Water poured from a height and running down the terraces. Spawn heights
+  // are kept close to the summit: the camera frames the mountain tightly, so
+  // anything released far above it does its falling off-screen.
   function pour(fromY, count = 260) {
     const s = shower(count, [C.water], R * 0.028,
       i => ({
         a: Math.random() * Math.PI * 2,
         r: Math.random() * R * 0.06,
-        y: fromY + Math.random() * H * 0.5,
+        y: fromY + Math.random() * H * 0.14,
         v: 0, x: 0, z: 0, s: 0.6 + Math.random() * 0.6,
       }),
       (b, dt) => {
@@ -138,7 +140,7 @@ export function createPuja(meru) {
         // once it lands it spreads outward across the tiers
         if (b.y <= 0.02) { b.y = 0.02; b.r += dt * R * 0.9; }
         if (b.r > R * 1.05 || b.y < -0.1) {
-          b.y = fromY + Math.random() * H * 0.2;
+          b.y = fromY + Math.random() * H * 0.14;
           b.r = Math.random() * R * 0.06; b.v = 0;
         }
         b.x = Math.cos(b.a) * b.r;
@@ -238,7 +240,7 @@ export function createPuja(meru) {
           const a = Math.random() * Math.PI * 2;
           const r = Math.sqrt(Math.random()) * R * 1.15;
           return { a, r, x: Math.cos(a) * r, z: Math.sin(a) * r,
-                   y: H * (1.1 + Math.random() * 1.4), v: 0,
+                   y: H * (1.0 + Math.random() * 0.45), v: 0,
                    rx: Math.random() * 3, ry: Math.random() * 3, rz: Math.random() * 3,
                    spin: (Math.random() - 0.5) * 2, rest: Math.random() * H * 0.55 };
         },
@@ -260,7 +262,7 @@ export function createPuja(meru) {
           b.a += dt * 0.5;
           b.r *= 1 - dt * 0.06;
           b.s *= 1 - dt * 0.12;
-          if (b.y > H * 2.1 || b.s < 0.05) {
+          if (b.y > H * 1.5 || b.s < 0.05) {
             b.y = 0.05; b.r = R * (0.2 + Math.random() * 0.7);
             b.s = 0.4 + Math.random();
           }
