@@ -122,11 +122,34 @@ export function createPuja(meru) {
 
   const ray = new THREE.Raycaster();
   const DOWN = new THREE.Vector3(0, -1, 0);
-  // Where does something dropped at (x, z) actually land? Ask the mesh.
-  function ground(x, z) {
+  function cast(x, z) {
     ray.set(new THREE.Vector3(x, H * 2.2, z), DOWN);
     const hit = ray.intersectObject(meru.mesh, false)[0];
     return hit ? hit.point.y : 0;
+  }
+
+  // Water has to run down the terraces, which means asking the height of the
+  // mountain under every drop on every frame. Raycasting 59,200 facets a few
+  // hundred times a frame is not on, so the surface is sampled once into a
+  // polar table and read from that. Nearest-sample is right here rather than
+  // smoothed: the Meru is a staircase, and the steps should stay steps.
+  const NA = 128, NR = 90, RMAX = R * 1.3;
+  const field = new Float32Array(NA * NR);
+  for (let ai = 0; ai < NA; ai++) {
+    const a = (ai / NA) * Math.PI * 2;
+    for (let ri = 0; ri < NR; ri++) {
+      const r = (ri / (NR - 1)) * RMAX;
+      field[ai * NR + ri] = cast(Math.cos(a) * r, Math.sin(a) * r);
+    }
+  }
+  function ground(x, z) {
+    const r = Math.hypot(x, z);
+    if (r > RMAX) return 0;
+    let a = Math.atan2(z, x);
+    if (a < 0) a += Math.PI * 2;
+    const ai = Math.min(NA - 1, Math.round(a / (Math.PI * 2) * NA) % NA);
+    const ri = Math.min(NR - 1, Math.round(r / RMAX * (NR - 1)));
+    return field[ai * NR + ri];
   }
 
   const geo = { blossom: blossomGeometry(), petal: petalGeometry(0.22), drop: dropGeometry() };
@@ -188,34 +211,40 @@ export function createPuja(meru) {
     };
   }
 
-  // Water: drops stretch as they gather speed, then land and spread.
-  function water(fromY, count, spread = 0.10) {
+  // Water: drops stretch as they gather speed; once they strike the mountain
+  // they stop falling and start running outward and down over the terraces,
+  // following the surface, until they leave the base and are sent up again.
+  function water(fromY, count, spread = 0.10, flow = 0.62) {
     const s = swarm(geo.drop, [C.water], count,
       () => {
         const a = rnd(0, Math.PI * 2), r = rnd(0, R * spread);
         return { a, r, x: Math.cos(a) * r, z: Math.sin(a) * r,
-                 y: fromY + rnd(0, H * 0.10), v: rnd(0, 0.3),
-                 sx: R * 0.016, sy: R * 0.03, sz: R * 0.016, land: 0 };
+                 y: fromY + rnd(0, H * 0.12), v: rnd(0, 0.3),
+                 sx: R * 0.015, sy: R * 0.028, sz: R * 0.015, run: false };
       },
       (b, dt) => {
-        if (b.land) {
-          b.land -= dt;
-          b.r += dt * R * 0.55;
-          b.sy = Math.max(R * 0.004, b.sy * (1 - dt * 3));
-          if (b.land <= 0) {
-            b.y = fromY + rnd(0, H * 0.10);
-            b.r = rnd(0, R * spread); b.v = 0;
-            b.sy = R * 0.03; b.land = 0;
+        if (b.run) {
+          b.r += dt * R * flow;
+          b.x = Math.cos(b.a) * b.r;
+          b.z = Math.sin(b.a) * b.r;
+          const g = ground(b.x, b.z);
+          // fall freely off a step, cling to the tread
+          if (b.y - g > R * 0.02) { b.v += dt * 2.6; b.y -= b.v * dt; }
+          else { b.y = g + R * 0.010; b.v = 0; }
+          b.sy = R * 0.020;
+          if (b.r > R * 1.12) {
+            b.a = rnd(0, Math.PI * 2);
+            b.r = rnd(0, R * spread);
+            b.y = fromY + rnd(0, H * 0.12);
+            b.v = 0; b.run = false; b.sy = R * 0.028;
           }
         } else {
           b.v += dt * 2.6;
           b.y -= b.v * dt;
-          b.sy = R * 0.03 * (1 + b.v * 0.9);      // stretch with speed
+          b.sy = R * 0.028 * (1 + b.v * 0.85);    // stretch with speed
           const g = ground(b.x, b.z);
-          if (b.y <= g + R * 0.01) { b.y = g + R * 0.01; b.land = 0.5; }
+          if (b.y <= g + R * 0.010) { b.y = g + R * 0.010; b.run = true; b.v = 0; }
         }
-        b.x = Math.cos(b.a) * b.r;
-        b.z = Math.sin(b.a) * b.r;
       });
     return s;
   }
@@ -259,8 +288,8 @@ export function createPuja(meru) {
       add(s.holder, (dt, age) => s.tick(dt, age));
     } },
 
-    { view: [0, 1.42, 0.85], hold: 3.2, run() {             // 3 Padya
-      const w = water(H * 0.20, 110, 0.20);
+    { view: [0, 1.38, 1.00], hold: 3.6, run() {             // 3 Padya
+      const w = water(H * 0.22, 130, 0.22, 0.5);
       add(w.holder, dt => w.tick(dt));
       const pool = ring(R * 1.00, 0.015, C.water, R * 0.012);
       pool.material.opacity = 0.75; pool.material.transparent = true;
@@ -268,17 +297,17 @@ export function createPuja(meru) {
     } },
 
     { view: [0.5, 1.15, 0.95], hold: 3.2, run() {           // 4 Arghya
-      const w = water(H * 0.72, 130, 0.12);
+      const w = water(H * 0.74, 150, 0.10, 0.7);
       add(w.holder, dt => w.tick(dt));
     } },
 
     { view: [0, 0.95, 0.72], hold: 3.2, run() {             // 5 Acamaniya
-      const w = water(H * 1.02, 70, 0.05);
+      const w = water(H * 1.04, 80, 0.04, 0.45);
       add(w.holder, dt => w.tick(dt));
     } },
 
-    { view: [0, HOME.phi, 1.08], hold: 4.2, run() {         // 6 Snana
-      const w = water(H * 1.06, 340, 0.09);
+    { view: [0, HOME.phi, 1.12], hold: 5.0, run() {         // 6 Snana
+      const w = water(H * 1.08, 380, 0.07, 0.80);
       add(w.holder, dt => w.tick(dt));
       for (let k = 0; k < 4; k++) {
         const y = H * (0.86 - k * 0.22);
@@ -350,7 +379,7 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0, 0.62, 1.12], hold: 5.0, run() {             // 10 Puspa
+    { view: [0, 0.80, 1.32], hold: 5.6, run() {             // 10 Puspa
       // whole blossoms, and loose petals, settling where the mesh actually is
       const blooms = swarm(geo.blossom, BLOOM, 130,
         () => {
