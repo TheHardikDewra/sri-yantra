@@ -133,14 +133,6 @@ export function mount(canvas, url) {
     scene.add(mesh);
     state.mesh = mesh;
 
-    // crease lines: only edges where the surface genuinely turns a corner
-    const eg = new THREE.EdgesGeometry(geo, 24);
-    const edges = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({
-      color: 0x000000, transparent: true, opacity: 0.30,
-    }));
-    scene.add(edges);
-    state.edges = edges;
-
     // Frame the mountain from its own size. The home view looks straight down
     // the figure's mirror plane, so the Meru reads dead square rather than at
     // some arbitrary angle.
@@ -155,6 +147,23 @@ export function mount(canvas, url) {
     state.ready = true;
     window.__meru = state;                    // handy for tuning in devtools
     canvas.dispatchEvent(new CustomEvent('meru:ready', { bubbles: true }));
+
+    // The crease lines cost far more than everything else here: finding which
+    // of 59,200 facets meet at a real corner takes tens of seconds, and doing
+    // it before the first frame leaves the viewer staring at a blank box. Show
+    // the mountain first, then add the lines a couple of frames later.
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const edges = new THREE.LineSegments(
+        new THREE.EdgesGeometry(geo, 24),
+        new THREE.LineBasicMaterial({
+          color: state.material === 'ink' ? 0xbbb1a0 : 0x000000,
+          transparent: true,
+          opacity: state.material === 'ink' ? 0.35 : 0.30,
+        }));
+      edges.visible = state.edgesWanted !== false;
+      scene.add(edges);
+      state.edges = edges;
+    }));
   });
 
   function resize() {
@@ -191,6 +200,7 @@ export function mount(canvas, url) {
     state.mesh.material.color = new THREE.Color(MATERIALS[name].color);
     state.mesh.material.envMapIntensity = MATERIALS[name].envMapIntensity;
     state.mesh.material.needsUpdate = true;
+    if (!state.edges) return;
     state.edges.material.color = new THREE.Color(
       name === 'ink' ? 0xbbb1a0 : 0x000000);
     state.edges.material.opacity = name === 'ink' ? 0.35 : 0.30;
@@ -198,7 +208,10 @@ export function mount(canvas, url) {
   state.setWireframe = on => {
     if (state.mesh) state.mesh.material.wireframe = on;
   };
-  state.setEdges = on => { if (state.edges) state.edges.visible = on; };
+  state.setEdges = on => {
+    state.edgesWanted = on;                   // may arrive before the lines do
+    if (state.edges) state.edges.visible = on;
+  };
   state.setSpin = on => {
     controls.autoRotate = on;
     if (!on) squareUp();          // never leave it a degree off true
