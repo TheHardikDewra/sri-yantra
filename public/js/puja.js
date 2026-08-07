@@ -20,26 +20,56 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const UPACHARAS = [
-  { n: 'Āvāhana', e: 'invocation — the deity is invited to be present' },
-  { n: 'Āsana', e: 'a seat is offered' },
-  { n: 'Pādya', e: 'water for washing the feet' },
-  { n: 'Arghya', e: 'water offered to the hands' },
-  { n: 'Ācamanīya', e: 'water for sipping' },
-  { n: 'Snāna', e: 'the bath — poured over and let run down' },
-  { n: 'Vastra', e: 'cloth, wrapped about the form' },
-  { n: 'Yajñopavīta', e: 'the sacred thread, laid across the shoulder' },
-  { n: 'Gandha', e: 'sandal paste, marked onto the tiers' },
-  { n: 'Puṣpa', e: 'flowers, let fall over the enclosures' },
-  { n: 'Dhūpa', e: 'incense, its smoke drawn upward' },
-  { n: 'Dīpa', e: 'the lamp, carried round the form' },
-  { n: 'Naivedya', e: 'food, set down at the four gates' },
-  { n: 'Tāmbūla', e: 'betel, offered after the meal' },
-  { n: 'Pradakṣiṇa', e: 'circumambulation, keeping it to the right' },
-  { n: 'Namaskāra', e: 'prostration, and the offering is complete' },
+  { n: 'Āvāhana', nh: 'आवाहन',
+    e: 'invocation — the deity is invited to be present',
+    eh: 'देवी को उपस्थित होने का निमन्त्रण' },
+  { n: 'Āsana', nh: 'आसन',
+    e: 'a seat is offered', eh: 'आसन अर्पित किया जाता है' },
+  { n: 'Pādya', nh: 'पाद्य',
+    e: 'water for washing the feet', eh: 'चरण धोने के लिए जल' },
+  { n: 'Arghya', nh: 'अर्घ्य',
+    e: 'water offered to the hands', eh: 'हाथों के लिए जल' },
+  { n: 'Ācamanīya', nh: 'आचमनीय',
+    e: 'water for sipping', eh: 'आचमन के लिए जल' },
+  { n: 'Snāna', nh: 'स्नान',
+    e: 'the bath — poured over and let run down',
+    eh: 'स्नान - ऊपर से अर्पित, बहता हुआ' },
+  { n: 'Vastra', nh: 'वस्त्र',
+    e: 'cloth, wrapped about the form',
+    eh: 'वस्त्र, स्वरूप के चारों ओर' },
+  { n: 'Yajñopavīta', nh: 'यज्ञोपवीत',
+    e: 'the sacred thread, laid across the shoulder',
+    eh: 'यज्ञोपवीत, कन्धे पर धारण' },
+  { n: 'Gandha', nh: 'गन्ध',
+    e: 'sandal paste, marked onto the form',
+    eh: 'चन्दन, स्वरूप पर अंकित' },
+  { n: 'Puṣpa', nh: 'पुष्प',
+    e: 'flowers, let fall over the enclosures',
+    eh: 'पुष्प, आवरणों पर बरसाए हुए' },
+  { n: 'Dhūpa', nh: 'धूप',
+    e: 'incense, waved before the form',
+    eh: 'धूप, स्वरूप के समक्ष घुमाई हुई' },
+  { n: 'Dīpa', nh: 'दीप',
+    e: 'the lamp, circled before the form',
+    eh: 'दीप, स्वरूप के समक्ष घुमाया हुआ' },
+  { n: 'Naivedya', nh: 'नैवेद्य',
+    e: 'food, set down at the four gates',
+    eh: 'भोग, चारों द्वारों पर अर्पित' },
+  { n: 'Tāmbūla', nh: 'ताम्बूल',
+    e: 'betel, offered after the meal',
+    eh: 'ताम्बूल, भोजन के पश्चात्' },
+  { n: 'Pradakṣiṇa', nh: 'प्रदक्षिणा',
+    e: 'circumambulation, keeping it to the right',
+    eh: 'प्रदक्षिणा, दाहिने रखते हुए' },
+  { n: 'Namaskāra', nh: 'नमस्कार',
+    e: 'prostration, and the offering is complete',
+    eh: 'प्रणाम - और अर्पण पूर्ण हुआ' },
 ];
 
-// marigold, hibiscus, jasmine, champaka - what actually gets offered
-const BLOOM = [0xf07f1a, 0xd8321f, 0xf6efdc, 0xf2c53d, 0xe45c2a];
+// marigold, hibiscus, jasmine, champaka, rose and aparajita - what actually
+// gets offered
+const BLOOM = [0xf07f1a, 0xd8321f, 0xf6efdc, 0xf2c53d, 0xe45c2a,
+               0xe87fa3, 0x9b6bb8];
 const C = {
   water: 0xa9cde4, cloth: 0xa8231b, thread: 0xf4ecd8,
   sandal: 0xe8dcc0, smoke: 0xc4bcae, flame: 0xffbe4d,
@@ -88,6 +118,26 @@ function blossomGeometry(petals = 5) {
   g.computeVertexNormals();
   parts.forEach(x => x.dispose());
   petal.dispose();
+  return g;
+}
+
+// A paan leaf: heart-shaped with round lobes at the stem and a drawn-out
+// point, creased along the midrib, tip drooping. The flower petal reads as a
+// flower part; a betel leaf is its own thing.
+function betelLeafGeometry() {
+  const sh = new THREE.Shape();
+  sh.moveTo(0, 0.06);
+  sh.bezierCurveTo(-0.16, -0.05, -0.46, -0.02, -0.52, 0.30);
+  sh.bezierCurveTo(-0.56, 0.58, -0.32, 0.92, 0, 1.12);
+  sh.bezierCurveTo(0.32, 0.92, 0.56, 0.58, 0.52, 0.30);
+  sh.bezierCurveTo(0.46, -0.02, 0.16, -0.05, 0, 0.06);
+  const g = new THREE.ShapeGeometry(sh, 14);
+  const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i);
+    p.setZ(i, Math.abs(x) * 0.22 - Math.max(0, y - 0.55) ** 2 * 0.35);
+  }
+  g.computeVertexNormals();
   return g;
 }
 
@@ -195,7 +245,8 @@ export function createPuja(meru) {
     return prof.tiers[prof.tiers.length - 1].r[ai];
   }
 
-  const geo = { blossom: blossomGeometry(), petal: petalGeometry(0.22), drop: dropGeometry() };
+  const geo = { blossom: blossomGeometry(), petal: petalGeometry(0.22),
+                drop: dropGeometry(), leaf: betelLeafGeometry() };
 
   const add = (obj, tick) => {
     group.add(obj);
@@ -211,6 +262,7 @@ export function createPuja(meru) {
   function clear() {
     while (timers.length) clearTimeout(timers.pop());
     meru.cancelBow?.();
+    meru.cancelWalk?.();
     for (const r of live) {
       group.remove(r.obj);
       r.obj.traverse?.(o => {
@@ -427,9 +479,98 @@ export function createPuja(meru) {
       add(w.holder, dt => w.tick(dt));
     } },
 
-    { view: [0, 0.95, 0.72], hold: 3.2, run() {             // 5 Acamaniya
-      const w = water(H * 1.04, 80, 0.04, 0.45);
-      add(w.holder, dt => w.tick(dt));
+    { view: [0, 0.98, 0.86], hold: 8.5, run() {             // 5 Acamaniya
+      // A sip, offered properly: a copper lota with an uddharani in it. The
+      // spoon dips, lifts, carries the water to the summit, tips it out, and
+      // returns - twice over the hold.
+      const copper = extra => new THREE.MeshStandardMaterial(Object.assign({
+        color: 0xc06a3d, metalness: 0.85, roughness: 0.30 }, extra));
+      const Lx = R * 0.34, Ly = H * 0.74, Lz = R * 0.62;
+      const lota = new THREE.Mesh(new THREE.LatheGeometry([
+        [0.00, 0.00], [0.30, 0.00], [0.42, 0.04], [0.46, 0.16],
+        [0.40, 0.30], [0.33, 0.38], [0.36, 0.44], [0.44, 0.48],
+        [0.46, 0.52], [0.42, 0.53], [0.33, 0.50], [0.00, 0.49],
+      ].map(([x, y]) => new THREE.Vector2(x * R * 0.16, y * R * 0.16)), 24),
+        copper({ side: THREE.DoubleSide }));
+      lota.position.set(Lx, Ly, Lz);
+      add(lota, () => {});
+      const pool = new THREE.Mesh(
+        new THREE.CircleGeometry(R * 0.048, 20), matt(C.water, 1, 0.15));
+      pool.rotation.x = -Math.PI / 2;
+      pool.position.set(Lx, Ly + R * 0.070, Lz);
+      add(pool, () => {});
+
+      const spoon = new THREE.Group();
+      const cup = new THREE.Mesh(
+        new THREE.SphereGeometry(R * 0.024, 12, 8, 0, Math.PI * 2,
+                                 Math.PI / 2, Math.PI / 2),
+        copper({ side: THREE.DoubleSide }));
+      const sip = new THREE.Mesh(
+        new THREE.CircleGeometry(R * 0.018, 12), matt(C.water, 1, 0.15));
+      sip.rotation.x = -Math.PI / 2;
+      sip.position.y = -R * 0.004;
+      const handle = new THREE.Mesh(
+        new THREE.CylinderGeometry(R * 0.0045, R * 0.0045, R * 0.17, 6),
+        copper());
+      handle.position.set(0, R * 0.055, R * 0.062);
+      handle.rotation.x = 0.75;
+      spoon.add(cup, sip, handle);
+
+      const pending = [];
+      const A = new THREE.Vector3(Lx, Ly + R * 0.115, Lz);
+      const B = new THREE.Vector3(0, H * 1.055, R * 0.10);
+      let emit = 0;
+      const ss = u => u * u * (3 - 2 * u);
+      add(spoon, (dt, age) => {
+        const T = 4.2, p = age % T;
+        let P, tilt = 0;
+        if (p < 0.9) {                          // dip into the lota
+          const u = ss(Math.min(1, p / 0.9));
+          P = A.clone(); P.y -= Math.sin(Math.PI * u) * R * 0.055;
+          sip.visible = u > 0.5;
+        } else if (p < 1.5) {                   // lift clear
+          P = A.clone();
+        } else if (p < 2.5) {                   // carry it to the summit
+          const u = ss((p - 1.5) / 1.0);
+          P = A.clone().lerp(B, u);
+          P.y += Math.sin(Math.PI * u) * H * 0.05;
+          tilt = -0.15 * u;
+        } else if (p < 3.2) {                   // tip it out
+          const u = ss((p - 2.5) / 0.7);
+          P = B.clone();
+          tilt = -0.15 - 1.45 * u;
+          emit -= dt;
+          if (u > 0.15 && u < 0.9 && emit <= 0) {
+            emit = 0.075;
+            pending.push({ x: P.x, y: P.y - R * 0.01, z: P.z - R * 0.015 });
+          }
+          if (u > 0.9) sip.visible = false;
+        } else {                                // come back
+          const u = ss((p - 3.2) / 1.0);
+          P = B.clone().lerp(A, u);
+          tilt = -1.6 * (1 - u);
+        }
+        spoon.position.copy(P);
+        spoon.rotation.x = tilt;
+      });
+
+      const drops = swarm(geo.drop, [C.water], 24,
+        () => ({ x: 0, y: -9, z: 0, v: 0, live: -1,
+                 sx: R * 0.009, sy: R * 0.016, sz: R * 0.009, s: undefined }),
+        (b, dt) => {
+          if (b.live < 0) {
+            const q = pending.shift();
+            if (!q) return;
+            b.x = q.x; b.y = q.y; b.z = q.z; b.v = rnd(0.05, 0.2);
+            b.live = 1.4;
+            return;
+          }
+          b.v += dt * 2.4; b.y -= b.v * dt; b.live -= dt;
+          if (b.y <= ground(b.x, b.z) + R * 0.008 || b.live <= 0) {
+            b.y = -9; b.live = -1;
+          }
+        });
+      add(drops.holder, dt => drops.tick(dt));
     } },
 
     { view: [0, HOME.phi, 1.12], hold: 5.0, run() {         // 6 Snana
@@ -446,97 +587,171 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0.7, 1.14, 1.02], hold: 3.8, run() {           // 7 Vastra
-      // A thread wound round a staircase is invisible: it sits in the angle
-      // between tread and riser and every terrace above it hides it. Cloth
-      // should be cloth - a sheet fitted to the mountain and standing a little
-      // off it, built by asking the silhouette its radius at every point of a
-      // grid in angle and height.
-      const NAv = 160, NH = 40;
-      const y0 = H * 0.14, y1 = H * 0.62, off = R * 0.045;
-      const pos = [], idx = [];
-      // the hem rows tuck in close to the surface so the edge reads wrapped
-      const hem = off * 0.14;
-      for (let j2 = 0; j2 < NH; j2++) {
-        const v = j2 / (NH - 1);
-        const y = y0 + v * (y1 - y0);
-        for (let i2 = 0; i2 < NAv; i2++) {
-          const a = (i2 / NAv) * Math.PI * 2;
-          const rad = radiusAt(y, a) + (j2 === 0 || j2 === NH - 1 ? hem : off);
-          pos.push(Math.cos(a) * rad, y, Math.sin(a) * rad);
-        }
-      }
-      for (let j2 = 0; j2 < NH - 1; j2++) {
-        for (let i2 = 0; i2 < NAv; i2++) {
-          const a0 = j2 * NAv + i2, a1 = j2 * NAv + (i2 + 1) % NAv;
-          const b0 = a0 + NAv, b1 = a1 + NAv;
+    { view: [0.7, 1.10, 1.06], hold: 6.0, run() {           // 7 Vastra
+      // Cloth is cut and draped, not shrink-wrapped. A skirt is cinched round
+      // the drum's upper edge and falls under gravity: pleats deepen on the
+      // way down, the hem flares and settles just above the plinth, and the
+      // whole sheet breathes. A gold cord with a knot and two tails ties it.
+      const NA2 = 220, NV = 26;
+      const tieY = 0.700, hemY = 0.335;
+      const rTop = radiusAt(tieY, 0) + R * 0.020;
+      const geom = new THREE.BufferGeometry();
+      const pos = new Float32Array((NA2 + 1) * NV * 3);
+      const idx = [];
+      for (let j = 0; j < NV - 1; j++)
+        for (let i = 0; i < NA2; i++) {
+          const a0 = j * (NA2 + 1) + i, a1 = a0 + 1;
+          const b0 = a0 + (NA2 + 1), b1 = a1 + (NA2 + 1);
           idx.push(a0, b0, b1, a0, b1, a1);
         }
+      geom.setIndex(idx);
+      geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      const rowQuads = NA2 * 6;
+      geom.addGroup(0, rowQuads * (NV - 4), 0);              // the cloth
+      geom.addGroup(rowQuads * (NV - 4), rowQuads * 3, 1);   // the zari hem
+      const cloth = new THREE.Mesh(geom,
+        [matt(C.cloth, 1, 0.9), matt(0xd9a527, 1, 0.55)]);
+      const PLEATS = 26;
+      function drape(t) {
+        let n = 0;
+        for (let j = 0; j < NV; j++) {
+          const v = j / (NV - 1);
+          const fall = v * v * (3 - 2 * v);
+          const y = tieY + (hemY - tieY) * v;
+          for (let i = 0; i <= NA2; i++) {
+            const a = (i / NA2) * Math.PI * 2;
+            const pleat = Math.sin(a * PLEATS + Math.sin(t * 0.7)) *
+                          R * 0.030 * Math.pow(v, 1.6);
+            const belly = Math.sin(Math.PI * v) * R * 0.012;
+            const sway = Math.sin(a * 3 + t * 0.9) * R * 0.006 * v;
+            const r = rTop + R * 0.055 * fall + belly + pleat + sway;
+            pos[n++] = Math.cos(a) * r;
+            pos[n++] = y + Math.sin(a * PLEATS + t) * 0.004 * v;
+            pos[n++] = Math.sin(a) * r;
+          }
+        }
+        geom.attributes.position.needsUpdate = true;
+        geom.computeVertexNormals();
       }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      g.setIndex(idx);
-      g.computeVertexNormals();
-      const cloth = new THREE.Mesh(g, matt(C.cloth, 1, 0.9));
+      drape(0);
       add(cloth, (dt, age) => {
-        // drawn on from the hem upward
+        drape(age);
         const k = ease(Math.min(1, age / 1.6));
-        g.setDrawRange(0, Math.floor(idx.length * k / 6) * 6);
+        geom.setDrawRange(0, Math.floor(idx.length * k / 6) * 6);
       });
 
-      // a sash over it, so it does not read as a painted band
-      const sash = [];
-      for (let i2 = 0; i2 <= 200; i2++) {
-        const t = i2 / 200, a = t * Math.PI * 2 * 1.15 + 0.6;
-        const y = y0 + (0.15 + 0.75 * t) * (y1 - y0);
-        sash.push(new THREE.Vector3(
-          Math.cos(a) * (radiusAt(y, a) + off * 2.4), y,
-          Math.sin(a) * (radiusAt(y, a) + off * 2.4)));
-      }
-      const band = new THREE.Mesh(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(sash), 220, R * 0.030, 6, false),
-        matt(0xf0c33a, 1, 0.7));
-      add(band, (dt, age) => {
-        band.geometry.setDrawRange(0,
-          Math.floor(band.geometry.index.count * ease(Math.min(1, Math.max(0, age - 0.7) / 1.3))));
+      // the cord that cinches it, knotted at the front
+      const cordY = tieY + R * 0.014;
+      const cord = new THREE.Mesh(
+        new THREE.TorusGeometry(rTop + R * 0.012, R * 0.012, 8, 96),
+        matt(0xd9a527, 1, 0.5));
+      cord.rotation.x = Math.PI / 2;
+      cord.position.y = cordY;
+      cord.scale.setScalar(0.01);
+      add(cord, (dt, age) =>
+        cord.scale.setScalar(ease(Math.min(1, Math.max(0, age - 1.2) / 0.6))));
+      const knot = new THREE.Mesh(
+        new THREE.SphereGeometry(R * 0.028, 10, 8), matt(0xd9a527, 1, 0.5));
+      knot.scale.set(1.3, 0.8, 0.9);
+      knot.position.set(0, cordY, rTop + R * 0.016);
+      add(knot, (dt, age) => {
+        const k = ease(Math.min(1, Math.max(0, age - 1.6) / 0.5));
+        knot.scale.set(1.3 * k, 0.8 * k, 0.9 * k);
       });
+      for (const sgn of [-1, 1]) {
+        const tail = new THREE.Mesh(
+          new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(0, 0, 0),
+            new THREE.Vector3(sgn * R * 0.025, -R * 0.10, R * 0.02),
+            new THREE.Vector3(sgn * R * 0.05, -R * 0.19, R * 0.005)),
+            14, R * 0.008, 6), matt(0xd9a527, 1, 0.5));
+        tail.position.set(sgn * R * 0.012, cordY, rTop + R * 0.016);
+        tail.scale.setScalar(0.01);
+        add(tail, (dt, age) => {
+          tail.scale.setScalar(ease(Math.min(1, Math.max(0, age - 1.9) / 0.5)));
+          tail.rotation.z = Math.sin(age * 1.3 + sgn) * 0.10;
+        });
+      }
     } },
 
-    { view: [0.9, 1.10, 1.00], hold: 3.2, run() {           // 8 Yajnopavita
-      // Over one shoulder and under the other arm: a loop that rides high on
-      // one side and low on the other, held against the surface throughout.
-      const pts = [];
-      for (let i = 0; i <= 260; i++) {
-        const t = i / 260, a = t * Math.PI * 2;
-        const y = H * (0.86 - 0.70 * Math.abs(Math.sin(a / 2)));
-        const rad = radiusAt(y, a) + R * 0.055;
-        pts.push(new THREE.Vector3(Math.cos(a) * rad, y, Math.sin(a) * rad));
+    { view: [0.9, 1.10, 1.02], hold: 4.5, run() {           // 8 Yajnopavita
+      // A janeu is three thin strands lying together with a slow twist, not
+      // one cable: high over one shoulder, hanging low and a little free of
+      // the body on the other side, gathered by the brahma-granthi knot.
+      const N = 300, EPS = R * 0.0062;
+      const centre = [], tang = [];
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * Math.PI * 2;
+        const s = Math.sin(a / 2) ** 2;
+        const y = H * (0.86 - 0.62 * s) - H * 0.02 * Math.sin(Math.PI * s);
+        const rad = radiusAt(y, a) + R * 0.050 + R * 0.075 * s * s;
+        centre.push(new THREE.Vector3(
+          Math.cos(a) * rad, y, Math.sin(a) * rad));
       }
-      const thread = new THREE.Mesh(
-        new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 320,
-          R * 0.017, 7, true), matt(C.thread, 1, 0.9));
-      add(thread, (dt, age) => {
-        thread.geometry.setDrawRange(0,
-          Math.floor(thread.geometry.index.count * ease(Math.min(1, age / 1.5))));
-      });
+      for (let i = 0; i <= N; i++) {
+        tang.push(new THREE.Vector3()
+          .subVectors(centre[(i + 1) % N], centre[(i - 1 + N) % N]).normalize());
+      }
+      const up = new THREE.Vector3(0, 1, 0);
+      const shades = [0xf4ecd8, 0xefe5cc, 0xe9dec2];
+      for (let k = 0; k < 3; k++) {
+        const pts = [];
+        for (let i = 0; i <= N; i++) {
+          const n1 = new THREE.Vector3().crossVectors(tang[i], up).normalize();
+          const n2 = new THREE.Vector3().crossVectors(n1, tang[i]).normalize();
+          const ph = (k / 3) * Math.PI * 2 + (i / N) * Math.PI * 10;
+          pts.push(centre[i].clone()
+            .addScaledVector(n1, Math.cos(ph) * EPS)
+            .addScaledVector(n2, Math.sin(ph) * EPS));
+        }
+        const strand = new THREE.Mesh(
+          new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 340,
+            R * 0.0060, 5, true), matt(shades[k], 1, 0.85));
+        add(strand, (dt, age) => {
+          strand.geometry.setDrawRange(0, Math.floor(
+            strand.geometry.index.count * ease(Math.min(1, age / 1.6))));
+        });
+      }
+      // the granthi at the gather point, low on the loop
+      const gy = H * 0.24;
+      const gr = radiusAt(gy, Math.PI) + R * 0.050 + R * 0.075;
+      const knot = new THREE.Mesh(
+        new THREE.CylinderGeometry(R * 0.016, R * 0.016, R * 0.036, 8),
+        matt(C.thread, 1, 0.8));
+      knot.position.set(-gr, gy, 0);
+      knot.quaternion.setFromUnitVectors(up, new THREE.Vector3(0, 0, -1));
+      knot.scale.setScalar(0.01);
+      add(knot, (dt, age) =>
+        knot.scale.setScalar(ease(Math.min(1, Math.max(0, age - 1.4) / 0.5))));
     } },
 
-    { view: [0.4, 1.25, 0.90], hold: 3.0, run() {           // 9 Gandha
-      // marks smoothed onto each tier, not a wash over the whole thing
-      const n = 24;
-      for (let k = 0; k < n; k++) {
-        const a = (k / n) * Math.PI * 2;
-        const t = k / n;
-        const rad = R * (0.30 + 0.62 * ((k * 7) % n) / n);
-        const x = Math.cos(a) * rad, z = Math.sin(a) * rad;
-        const mark = new THREE.Mesh(
-          new THREE.CircleGeometry(R * 0.035, 16), matt(C.sandal, 1, 0.95));
-        mark.rotation.x = -Math.PI / 2;
-        mark.position.set(x, ground(x, z) + R * 0.004, z);
-        mark.scale.setScalar(0.01);
-        add(mark, (dt, age) =>
-          mark.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.045) / 0.4))));
+    { view: [0, 1.02, 0.85], hold: 4.5, run() {             // 9 Gandha
+      // Sandal paste the way it is actually worn: three strokes wiped across
+      // the front of the drum, and a round kumkum mark above them. Marks,
+      // not speckles.
+      const drumR = radiusAt(H * 0.22, 0);
+      const ARC = 1.05;
+      for (let k = 0; k < 3; k++) {
+        const stroke = new THREE.Mesh(
+          new THREE.TorusGeometry(drumR + R * 0.006, R * 0.011, 8, 72, ARC),
+          matt(C.sandal, 1, 0.9));
+        // lie flat, then swing the arc's middle round to the front (+z)
+        stroke.rotation.set(Math.PI / 2, ARC / 2 - Math.PI / 2, 0, 'YXZ');
+        stroke.position.y = 0.44 + k * 0.085;
+        const g0 = stroke.geometry;
+        g0.setDrawRange(0, 0);
+        add(stroke, (dt, age) => {
+          const u = ease(Math.min(1, Math.max(0, age - k * 0.55) / 0.9));
+          g0.setDrawRange(0, Math.floor(g0.index.count * u / 6) * 6);
+        });
       }
+      const dot = new THREE.Mesh(
+        new THREE.CircleGeometry(R * 0.045, 24),
+        matt(0xb3202c, 1, 0.85));
+      dot.position.set(0, 0.685, drumR + R * 0.010);
+      dot.scale.setScalar(0.01);
+      add(dot, (dt, age) =>
+        dot.scale.setScalar(ease(Math.min(1, Math.max(0, age - 2.1) / 0.5))));
     } },
 
     { view: [0, 0.80, 1.32], hold: 5.6, run() {             // 10 Puspa
@@ -581,44 +796,50 @@ export function createPuja(meru) {
       add(petals.holder, dt => petals.tick(dt));
     } },
 
-    { view: [0.6, 1.12, 1.05], hold: 4.6, run() {           // 11 Dhupa
-      // Smoke was flat untextured quads, which read as blurry grey cards. It
-      // is spheres now - round from every angle, no texture, no gradient -
-      // faint and many, growing and thinning as they climb.
-      const sx = R * 0.70, sz = R * 0.34;
-      const gy = ground(sx, sz);
-      const holder = new THREE.Group();
+    { view: [0, 1.06, 1.00], hold: 6.0, run() {             // 11 Dhupa
+      // Incense is WAVED, not parked: the stick traces slow clockwise circles
+      // before the mountain, seen from the front, and the smoke follows the
+      // moving ember. The smoke stays spheres - round from every angle, no
+      // texture, no gradient - faint and many, growing as they climb.
+      const cz = R * 1.05, cy = H * 0.42, rad = R * 0.20;
+      const wave = new THREE.Group();
       const stick = new THREE.Mesh(
-        new THREE.CylinderGeometry(R * 0.007, R * 0.009, H * 0.26, 8),
+        new THREE.CylinderGeometry(R * 0.006, R * 0.008, H * 0.22, 8),
         matt(0x5d4326));
-      stick.position.set(sx, gy + H * 0.13, sz);
+      stick.position.y = -H * 0.11;
       const ember = new THREE.Mesh(
         new THREE.SphereGeometry(R * 0.010, 8, 6),
         new THREE.MeshBasicMaterial({ color: 0xff7a2a }));
-      ember.position.set(sx, gy + H * 0.26, sz);
-      holder.add(stick, ember);
-      add(holder, () => {});
+      wave.add(stick, ember);
+      add(wave, (dt, age) => {
+        const a = -age * (Math.PI * 2 / 3.4);
+        wave.position.set(Math.cos(a) * rad, cy + Math.sin(a) * rad, cz);
+        wave.rotation.z = Math.cos(a) * 0.26;
+      });
 
       const puff = new THREE.SphereGeometry(1, 7, 6);
-      const s2 = swarm(puff, [C.smoke], 170,
+      const s2 = swarm(puff, [C.smoke], 190,
         () => {
-          const t = Math.random();                 // scatter along the column
-          return { a: rnd(0, 6.3), r: rnd(0, R * 0.02) + t * R * 0.16,
-                   t, x: sx, z: sz,
-                   y: gy + H * (0.26 + t * 1.05),
-                   s: R * (0.018 + t * 0.075) };
+          const t = Math.random();                 // pre-risen, so no cold start
+          const a0 = -t * 6;
+          return { x: Math.cos(a0) * rad, z: cz,
+                   y: cy + Math.sin(a0) * rad + t * H * 0.5,
+                   dx: rnd(-0.25, 0.25), dz: rnd(-0.3, 0.1),
+                   s: R * (0.014 + t * 0.05), live: rnd(0.2, 2.8) };
         },
         (b, dt) => {
-          b.y += dt * H * 0.24;
-          b.a += dt * 1.1;
-          b.r += dt * R * 0.055;
-          b.s += dt * R * 0.030;
-          b.x = sx + Math.cos(b.a) * b.r;
-          b.z = sz + Math.sin(b.a) * b.r;
-          if (b.y > gy + H * 1.35) {
-            b.y = gy + H * 0.27; b.r = rnd(0, R * 0.02);
-            b.s = R * 0.018; b.a = rnd(0, 6.3);
+          b.live -= dt;
+          if (b.live <= 0) {                       // re-emit at the ember
+            b.x = wave.position.x;
+            b.y = wave.position.y;
+            b.z = wave.position.z;
+            b.dx = rnd(-0.25, 0.25); b.dz = rnd(-0.3, 0.1);
+            b.s = R * 0.013; b.live = rnd(1.8, 3.2);
           }
+          b.y += dt * H * 0.17;
+          b.x += dt * R * 0.05 * b.dx;
+          b.z += dt * R * 0.05 * b.dz;
+          b.s += dt * R * 0.026;
         });
       s2.holder.children.forEach(m => {
         m.material.transparent = true;
@@ -628,7 +849,7 @@ export function createPuja(meru) {
       add(s2.holder, dt => s2.tick(dt));
     } },
 
-    { view: [0.3, 1.24, 0.98], hold: 6.0, run() {           // 12 Dipa
+    { view: [0, 1.04, 1.08], hold: 6.5, run() {             // 12 Dipa
       meru.setKeyLight?.(0.18);            // let the flame do the lighting
       const lamp = new THREE.Group();
       // A diya is a shallow dish pinched to a lip, not half a ball. Turned
@@ -667,12 +888,13 @@ export function createPuja(meru) {
       const light = new THREE.PointLight(C.flame, 26, R * 6, 2);
       light.position.set(R * 0.072, R * 0.075, 0);
       lamp.add(dish, ghee, wick, flame, core, light);
+      // arati: the lamp circles slowly clockwise before the mountain, from
+      // the front - the same gesture as the incense, made with fire.
+      const cz = R * 1.02, cy = H * 0.45, rad = R * 0.26;
       add(lamp, (dt, age) => {
-        const a = -age * 0.95;                      // keep it to the right
-        lamp.position.set(Math.cos(a) * R * 1.00,
-                          H * (0.42 + 0.20 * Math.sin(age * 1.5)),
-                          Math.sin(a) * R * 1.00);
-        lamp.rotation.y = -a + Math.PI / 2;         // the lip leads the way
+        const a = -age * (Math.PI * 2 / 4.6);
+        lamp.position.set(Math.cos(a) * rad, cy + Math.sin(a) * rad, cz);
+        lamp.rotation.z = Math.cos(a) * 0.20;
         const f = 0.86 + 0.14 * Math.sin(age * 21) + 0.06 * Math.sin(age * 8.3);
         flame.scale.set(1, f, 1);
         core.scale.set(1, f * 0.96, 1);
@@ -700,7 +922,7 @@ export function createPuja(meru) {
         const a = k * Math.PI / 2;
         const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;   // on the bhupura
         const g = new THREE.Group();
-        const n = R * 0.26;
+        const n = R * 0.15;                  // katori-sized, not cauldron-sized
         const bowl = new THREE.Mesh(
           new THREE.LatheGeometry(
             bowlProfile.map(([u, v]) => new THREE.Vector2(u * n, v * n)), 26),
@@ -729,10 +951,11 @@ export function createPuja(meru) {
         const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;
         const g = new THREE.Group();
         for (let j = 0; j < 3; j++) {
-          const leaf = new THREE.Mesh(geo.petal, matt(C.leaf, 1, 0.55));
-          leaf.scale.setScalar(R * 0.21);
-          leaf.rotation.set(-Math.PI / 2 + 0.06, 0, (j - 1) * 0.42);
-          leaf.position.y = R * 0.004 * j;
+          // real paan leaves - glossy, creased, heart-shaped - fanned out
+          const leaf = new THREE.Mesh(geo.leaf, matt(0x2e6b30, 1, 0.35));
+          leaf.scale.setScalar(R * 0.16);
+          leaf.rotation.set(-Math.PI / 2 + 0.08, 0, (j - 1) * 0.5);
+          leaf.position.y = R * 0.006 * j;
           g.add(leaf);
         }
         const nut = new THREE.Mesh(
@@ -748,47 +971,56 @@ export function createPuja(meru) {
       }
     } },
 
-    { view: [0, 1.40, 1.02], hold: 11.5, run() {            // 15 Pradakshina
-      // Orbiting an object against an empty background reads as the object
-      // turning, not as you walking - there is nothing to have parallax
-      // against. So the path gets lamps standing on it. They stay put, the
-      // camera passes them, and the motion becomes yours.
-      const n = 12, rad = R * 1.42;
-      for (let k = 0; k < n; k++) {
-        const a = (k / n) * Math.PI * 2;
-        const g = new THREE.Group();
-        const cup = new THREE.Mesh(
-          new THREE.LatheGeometry([
-            [0.00, 0.00], [0.34, 0.00], [0.52, 0.10], [0.56, 0.22],
-            [0.50, 0.22], [0.44, 0.11], [0.24, 0.05], [0.00, 0.04],
-          ].map(([u, v]) => new THREE.Vector2(u * R * 0.13, v * R * 0.13)), 18),
-          new THREE.MeshStandardMaterial({
-            color: C.brass, metalness: 0.9, roughness: 0.35,
-            side: THREE.DoubleSide }));
-        const fl = new THREE.Mesh(
-          new THREE.SphereGeometry(R * 0.016, 10, 8),
-          new THREE.MeshBasicMaterial({ color: 0xffc25e }));
-        fl.scale.set(1, 1.7, 1);
-        fl.position.y = R * 0.030;
-        const li = new THREE.PointLight(0xffb347, 3.2, R * 1.4, 2);
-        li.position.y = R * 0.035;
-        g.add(cup, fl, li);
-        g.position.set(Math.cos(a) * rad, 0, Math.sin(a) * rad);
-        g.scale.setScalar(0.01);
-        add(g, (dt, age) => {
-          g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.05) / 0.4)));
-          fl.scale.set(1, 1.7 * (0.85 + 0.15 * Math.sin(age * 17 + k)), 1);
-        });
+    { view: [0, 1.30, 1.04], hold: 12.0, run() {            // 15 Pradakshina
+      // Walking, not orbiting. The camera goes ON the path at eye height,
+      // aimed along it with the Meru held on the right - and the path runs
+      // BETWEEN two rows of lamps, so they stream past on either side. That
+      // parallax is what makes the motion yours.
+      const walkR = R * 1.42;
+      const cupProfile = [
+        [0.00, 0.00], [0.34, 0.00], [0.52, 0.10], [0.56, 0.22],
+        [0.50, 0.22], [0.44, 0.11], [0.24, 0.05], [0.00, 0.04],
+      ];
+      const rows = [[12, R * 1.60, 1.0, true], [8, R * 1.22, 0.7, false]];
+      for (const [n, rad, sc, lit] of rows) {
+        for (let k = 0; k < n; k++) {
+          const a = (k / n) * Math.PI * 2 + (n === 8 ? Math.PI / 8 : 0);
+          const g = new THREE.Group();
+          const cup = new THREE.Mesh(
+            new THREE.LatheGeometry(cupProfile.map(([u, v]) =>
+              new THREE.Vector2(u * R * 0.13 * sc, v * R * 0.13 * sc)), 18),
+            new THREE.MeshStandardMaterial({
+              color: C.brass, metalness: 0.9, roughness: 0.35,
+              side: THREE.DoubleSide }));
+          const fl = new THREE.Mesh(
+            new THREE.SphereGeometry(R * 0.016 * sc, 10, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffc25e }));
+          fl.scale.set(1, 1.7, 1);
+          fl.position.y = R * 0.030 * sc;
+          g.add(cup, fl);
+          if (lit) {
+            const li = new THREE.PointLight(0xffb347, 3.2, R * 1.4, 2);
+            li.position.y = R * 0.035;
+            g.add(li);
+          }
+          g.position.set(Math.cos(a) * rad, 0, Math.sin(a) * rad);
+          g.scale.setScalar(0.01);
+          add(g, (dt, age) => {
+            g.scale.setScalar(ease(Math.min(1, Math.max(0, age - k * 0.05) / 0.4)));
+            fl.scale.set(1, 1.7 * (0.85 + 0.15 * Math.sin(age * 17 + k)), 1);
+          });
+        }
       }
       // a floor to walk on, so the lamps are standing on something
       const floor = new THREE.Mesh(
-        new THREE.RingGeometry(R * 1.18, R * 1.72, 96),
+        new THREE.RingGeometry(R * 1.05, R * 1.85, 96),
         matt(0x2a251d, 0.9, 0.95));
       floor.rotation.x = -Math.PI / 2;
       floor.position.y = -0.002;
       add(floor, () => {});
-      // walked at eye level, where passing the lamps reads as walking
-      later(() => meru.circumambulate(9200, 1.38, 1.02), 700);
+      later(() => meru.walkCircuit
+        ? meru.walkCircuit(9600, walkR, H * 0.335)
+        : meru.circumambulate(9200, 1.38, 1.02), 600);
     } },
 
     { view: null, hold: 4.0, run() { meru.bow(3400); } },              // 16
