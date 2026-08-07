@@ -76,7 +76,6 @@ export const STATIC_HI = [
   ['#meru .toolbar .tool:nth-child(2) .tool-label', 'दृश्य', 'text'],
   ['#meru .pills label:nth-child(1) span', 'धीरे घूमे'],
   ['#meru .pills label:nth-child(2) span', 'वेदी-रेखाएँ'],
-  ['#meru .pills label:nth-child(3) span', 'तार-जाल'],
   ['#meru .toolbar .tool:nth-child(3) .tool-label', 'कोण', 'text'],
   ['#viewpoint button[data-view="front"]', 'सम्मुख', 'text'],
   ['#viewpoint button[data-view="top"]', 'ऊपर से', 'text'],

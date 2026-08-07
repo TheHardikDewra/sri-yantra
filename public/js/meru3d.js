@@ -305,9 +305,6 @@ export function mount(canvas, url) {
     state.mesh.material.envMapIntensity = MATERIALS[name].envMapIntensity;
     state.mesh.material.needsUpdate = true;
   };
-  state.setWireframe = on => {
-    if (state.mesh) state.mesh.material.wireframe = on;
-  };
   state.setEdges = on => {
     state.edgesWanted = on;                   // may arrive before the lines do
     if (state.edges) state.edges.visible = on;

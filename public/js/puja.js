@@ -441,26 +441,17 @@ export function createPuja(meru) {
         const k = (d - lens[i - 1]) / (lens[i] - lens[i - 1] || 1);
         return p0.clone().lerp(p1, k);
       };
-      // The petals are LAID: each falls from above its place, tumbling a
-      // little, lands, and settles flat. Not conjured - dropped.
       const n = 48;
       const s1 = swarm(geo.petal, [BLOOM[0], BLOOM[3], BLOOM[2]], n,
         i => {
           const p = at((i / n) * total);
           const a = Math.atan2(p.z, p.x);       // petals face out from the axis
-          return { x: p.x, z: p.z, yF: p.y, y: p.y + rnd(0.45, 0.8),
-                   v: 0, done: false,
+          return { x: p.x, z: p.z, y: p.y,
                    rx: -Math.PI / 2, ry: 0, rz: -a - Math.PI / 2,
-                   s: R * 0.26, i };
+                   s: 0.001, full: R * 0.26, i };
         },
         (b, dt, age) => {
-          const t0 = b.i * 0.045;
-          if (age < t0 || b.done) return;
-          b.v += dt * 2.3;
-          b.y -= b.v * dt;
-          const air = Math.min(1, (b.y - b.yF) * 4);
-          b.rx = -Math.PI / 2 + Math.sin(age * 6 + b.i * 1.7) * 0.55 * air;
-          if (b.y <= b.yF) { b.y = b.yF; b.rx = -Math.PI / 2; b.done = true; }
+          b.s = b.full * ease(Math.min(1, Math.max(0, age - b.i * 0.02) / 0.5));
         });
       add(s1.holder, (dt, age) => s1.tick(dt, age));
 
@@ -472,8 +463,7 @@ export function createPuja(meru) {
         new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path, true), 360,
           R * 0.012, 6, true), matt(C.sandal, 1, 0.5));
       seat.scale.setScalar(0.01);
-      add(seat, (dt, age) =>
-        seat.scale.setScalar(ease(Math.min(1, Math.max(0, age - 1.6) / 0.7))));
+      add(seat, (dt, age) => seat.scale.setScalar(ease(Math.min(1, age / 0.8))));
     } },
 
     { view: [0, 1.38, 1.00], hold: 3.6, run() {             // 3 Padya
@@ -622,29 +612,21 @@ export function createPuja(meru) {
       const cloth = new THREE.Mesh(geom,
         [matt(C.cloth, 1, 0.9), matt(0xd9a527, 1, 0.55)]);
       const PLEATS = 26;
-      // The cloth starts bunched at the cord and FALLS: each row is released
-      // a little after the one above it, drops under the unfurl driver,
-      // overshoots a touch and settles. Gravity, then breathing.
       function drape(t) {
-        const fk = Math.min(1, Math.max(0, t - 0.5) / 1.5) * 1.7;   // unfurl
         let n = 0;
         for (let j = 0; j < NV; j++) {
           const v = j / (NV - 1);
           const fall = v * v * (3 - 2 * v);
-          const p = Math.min(1, Math.max(0, (fk - v * 0.7) / 0.9));
-          const pe = p < 0.8 ? (p / 0.8) * 1.045          // drop, overshoot...
-                             : 1.045 - 0.045 * ((p - 0.8) / 0.2);   // ...settle
-          const y = tieY + (hemY - tieY) * v * pe;
-          const open = p * p;                          // pleats need slack
+          const y = tieY + (hemY - tieY) * v;
           for (let i = 0; i <= NA2; i++) {
             const a = (i / NA2) * Math.PI * 2;
             const pleat = Math.sin(a * PLEATS + Math.sin(t * 0.7)) *
-                          R * 0.030 * Math.pow(v, 1.6) * open;
-            const belly = Math.sin(Math.PI * v) * R * 0.012 * open;
-            const sway = Math.sin(a * 3 + t * 0.9) * R * 0.006 * v * open;
-            const r = rTop + R * 0.055 * fall * pe + belly + pleat + sway;
+                          R * 0.030 * Math.pow(v, 1.6);
+            const belly = Math.sin(Math.PI * v) * R * 0.012;
+            const sway = Math.sin(a * 3 + t * 0.9) * R * 0.006 * v;
+            const r = rTop + R * 0.055 * fall + belly + pleat + sway;
             pos[n++] = Math.cos(a) * r;
-            pos[n++] = y + Math.sin(a * PLEATS + t) * 0.004 * v * open;
+            pos[n++] = y + Math.sin(a * PLEATS + t) * 0.004 * v;
             pos[n++] = Math.sin(a) * r;
           }
         }
@@ -652,26 +634,19 @@ export function createPuja(meru) {
         geom.computeVertexNormals();
       }
       drape(0);
-      add(cloth, (dt, age) => drape(age));
 
-      // the cord that cinches it, knotted at the front
+      // the cord that cinches it, knotted at the front, tails swinging
       const cordY = tieY + R * 0.014;
       const cord = new THREE.Mesh(
         new THREE.TorusGeometry(rTop + R * 0.012, R * 0.012, 8, 96),
         matt(0xd9a527, 1, 0.5));
       cord.rotation.x = Math.PI / 2;
       cord.position.y = cordY;
-      cord.scale.setScalar(0.01);
-      add(cord, (dt, age) =>
-        cord.scale.setScalar(ease(Math.min(1, age / 0.35))));
       const knot = new THREE.Mesh(
         new THREE.SphereGeometry(R * 0.028, 10, 8), matt(0xd9a527, 1, 0.5));
       knot.scale.set(1.3, 0.8, 0.9);
       knot.position.set(0, cordY, rTop + R * 0.016);
-      add(knot, (dt, age) => {
-        const k = ease(Math.min(1, Math.max(0, age - 0.25) / 0.35));
-        knot.scale.set(1.3 * k, 0.8 * k, 0.9 * k);
-      });
+      const tails = [];
       for (const sgn of [-1, 1]) {
         const tail = new THREE.Mesh(
           new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(
@@ -680,76 +655,50 @@ export function createPuja(meru) {
             new THREE.Vector3(sgn * R * 0.05, -R * 0.19, R * 0.005)),
             14, R * 0.008, 6), matt(0xd9a527, 1, 0.5));
         tail.position.set(sgn * R * 0.012, cordY, rTop + R * 0.016);
-        tail.scale.setScalar(0.01);
-        add(tail, (dt, age) => {
-          tail.scale.setScalar(ease(Math.min(1, Math.max(0, age - 0.45) / 0.4)));
-          tail.rotation.z = Math.sin(age * 1.3 + sgn) * 0.10;
-        });
+        tails.push([sgn, tail]);
       }
+      // The whole garment arrives FROM ABOVE, formed: lowered onto the drum,
+      // pressed, settled - then it just breathes. The mountain narrows with
+      // height, so the descent never clips it.
+      const robe = new THREE.Group();
+      robe.add(cloth, cord, knot, ...tails.map(t => t[1]));
+      const dropV = 0.6;
+      add(robe, (dt, age) => {
+        drape(age);
+        const p = Math.min(1, Math.max(0, age - 0.1) / 1.2);
+        const pe = p < 0.8 ? (p / 0.8) * 1.03
+                           : 1.03 - 0.03 * ((p - 0.8) / 0.2);
+        robe.position.y = dropV * (1 - pe);
+        for (const [sgn, tail] of tails)
+          tail.rotation.z = Math.sin(age * 1.3 + sgn) * 0.10;
+      });
     } },
 
     { view: [0.9, 1.10, 1.02], hold: 4.5, run() {           // 8 Yajnopavita
-      // A closed loop draped over a mountain hangs the way gravity says: it
-      // crosses the summit terraces in one plane, falls straight down both
-      // flanks resting against the tier lips, and its slack swings round the
-      // front in a sagging arc, gathered by the brahma-granthi. It does NOT
-      // spiral round the whole figure at wandering heights.
-      const off2 = R * 0.045, BETA = -0.35;
-      const yTopA = 2.06, yLowA = 0.50, OFFSET = 0.26;
-      const rT1 = radiusAt(yTopA, BETA) + off2;
-      const rT2 = radiusAt(yTopA, BETA + Math.PI) + off2;
-      const T1 = [Math.cos(BETA) * rT1, Math.sin(BETA) * rT1];
-      const T2 = [Math.cos(BETA + Math.PI) * rT2,
-                  Math.sin(BETA + Math.PI) * rT2];
-      let nx = -(T2[1] - T1[1]), nz = T2[0] - T1[0];
-      const nl = Math.hypot(nx, nz); nx /= nl; nz /= nl;
-      if (nz < 0) { nx = -nx; nz = -nz; }      // bow the crossing frontward
-      const topArc = [];
-      for (let i = 0; i <= 36; i++) {
-        const u = i / 36;
-        const x = T1[0] + (T2[0] - T1[0]) * u
-                + nx * OFFSET * Math.sin(Math.PI * u);
-        const z = T1[1] + (T2[1] - T1[1]) * u
-                + nz * OFFSET * Math.sin(Math.PI * u);
-        topArc.push(new THREE.Vector3(x, ground(x, z) + off2, z));
+      // The loop that looked right: three thin strands lying together with a
+      // slow twist, riding high over one shoulder and hanging low and a
+      // little free on the other. It arrives the way a garland is offered -
+      // already formed, lowered on from above, pressed, and settled.
+      const N = 300, EPS = R * 0.0062;
+      const centre = [], tang = [];
+      for (let i = 0; i <= N; i++) {
+        const a = (i / N) * Math.PI * 2;
+        const s = Math.sin(a / 2) ** 2;
+        const y = H * (0.86 - 0.62 * s) - H * 0.02 * Math.sin(Math.PI * s);
+        const rad = radiusAt(y, a) + R * 0.050 + R * 0.075 * s * s;
+        centre.push(new THREE.Vector3(
+          Math.cos(a) * rad, y, Math.sin(a) * rad));
       }
-      const flank = b => {
-        const out = [];
-        for (let i = 1; i <= 26; i++) {
-          const y = yTopA + (yLowA - yTopA) * (i / 26);
-          out.push(new THREE.Vector3(
-            Math.cos(b) * (radiusAt(y, b) + off2), y,
-            Math.sin(b) * (radiusAt(y, b) + off2)));
-        }
-        return out;
-      };
-      const bottomArc = [];
-      for (let i = 1; i < 60; i++) {
-        const u = i / 60;
-        const b = BETA + Math.PI - u * Math.PI;      // round the front
-        const y = yLowA - 0.10 * Math.sin(Math.PI * u);
-        const rad = radiusAt(y, b) + off2 + 0.03 * Math.sin(Math.PI * u);
-        bottomArc.push(new THREE.Vector3(
-          Math.cos(b) * rad, y, Math.sin(b) * rad));
-      }
-      const loop = [...topArc, ...flank(BETA + Math.PI), ...bottomArc,
-                    ...flank(BETA).reverse()];
-      const centre = [];
-      for (let i = 0; i < loop.length; i++) {      // a Chaikin pass rounds it
-        const a = loop[i], b = loop[(i + 1) % loop.length];
-        centre.push(a.clone().lerp(b, 0.25), a.clone().lerp(b, 0.75));
-      }
-      const N = centre.length, EPS = R * 0.0062;
-      const tang = [];
-      for (let i = 0; i < N; i++) {
+      for (let i = 0; i <= N; i++) {
         tang.push(new THREE.Vector3()
           .subVectors(centre[(i + 1) % N], centre[(i - 1 + N) % N]).normalize());
       }
       const up = new THREE.Vector3(0, 1, 0);
       const shades = [0xf4ecd8, 0xefe5cc, 0xe9dec2];
+      const bundle = new THREE.Group();
       for (let k = 0; k < 3; k++) {
         const pts = [];
-        for (let i = 0; i < N; i++) {
+        for (let i = 0; i <= N; i++) {
           const n1 = new THREE.Vector3().crossVectors(tang[i], up).normalize();
           const n2 = new THREE.Vector3().crossVectors(n1, tang[i]).normalize();
           const ph = (k / 3) * Math.PI * 2 + (i / N) * Math.PI * 10;
@@ -757,26 +706,33 @@ export function createPuja(meru) {
             .addScaledVector(n1, Math.cos(ph) * EPS)
             .addScaledVector(n2, Math.sin(ph) * EPS));
         }
-        const strand = new THREE.Mesh(
-          new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 360,
-            R * 0.0060, 5, true), matt(shades[k], 1, 0.85));
-        add(strand, (dt, age) => {
-          strand.geometry.setDrawRange(0, Math.floor(
-            strand.geometry.index.count * ease(Math.min(1, age / 1.6))));
-        });
+        bundle.add(new THREE.Mesh(
+          new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 340,
+            R * 0.0060, 5, true), matt(shades[k], 1, 0.85)));
       }
-      // the granthi at the lowest point of the front arc
-      const gpos = bottomArc[29];
-      const gdir = new THREE.Vector3()
-        .subVectors(bottomArc[30], bottomArc[28]).normalize();
+      // the granthi at the gather point, low on the loop
+      const gy = H * 0.24;
+      const gr = radiusAt(gy, Math.PI) + R * 0.050 + R * 0.075;
       const knot = new THREE.Mesh(
         new THREE.CylinderGeometry(R * 0.016, R * 0.016, R * 0.036, 8),
         matt(C.thread, 1, 0.8));
-      knot.position.copy(gpos);
-      knot.quaternion.setFromUnitVectors(up, gdir);
+      knot.position.set(-gr, gy, 0);
+      knot.quaternion.setFromUnitVectors(up, new THREE.Vector3(0, 0, -1));
       knot.scale.setScalar(0.01);
-      add(knot, (dt, age) =>
-        knot.scale.setScalar(ease(Math.min(1, Math.max(0, age - 1.4) / 0.5))));
+      bundle.add(knot);
+      // the fall: dropped vertically onto its own path. Every point of a
+      // surface-hugging loop stays clear of the rock on the way down, since
+      // the mountain only narrows with height.
+      const drop = 0.55;
+      add(bundle, (dt, age) => {
+        const p = Math.min(1, Math.max(0, age - 0.15) / 1.1);
+        const pe = p < 0.8 ? (p / 0.8) * 1.03
+                           : 1.03 - 0.03 * ((p - 0.8) / 0.2);
+        bundle.position.y = drop * (1 - pe);
+        const sxz = 1 + 0.05 * Math.max(0, 1 - pe);
+        bundle.scale.set(sxz, 1, sxz);
+        knot.scale.setScalar(ease(Math.min(1, Math.max(0, age - 1.5) / 0.45)));
+      });
     } },
 
     { view: [0, 1.02, 0.85], hold: 4.5, run() {             // 9 Gandha
@@ -968,7 +924,7 @@ export function createPuja(meru) {
         new THREE.MeshBasicMaterial({ color: 0xffa733, transparent: true, opacity: 0.85 }));
       const core = new THREE.Mesh(
         new THREE.LatheGeometry(flameProfile(R * 0.048), 14),
-        new THREE.MeshBasicMaterial({ color: 0xfff0c0 }));
+        new THREE.MeshBasicMaterial({ color: 0xffdd7a }));
       flame.position.set(R * 0.072, R * 0.038, 0);
       core.position.set(R * 0.072, R * 0.040, 0);
       const light = new THREE.PointLight(C.flame, 26, R * 6, 2);
@@ -1020,7 +976,7 @@ export function createPuja(meru) {
         const a = k * Math.PI / 2;
         const x = Math.cos(a) * R * 0.88, z = Math.sin(a) * R * 0.88;   // on the bhupura
         const g = new THREE.Group();
-        const n = R * 0.15;                  // katori-sized, not cauldron-sized
+        const n = R * 0.10;                  // katori-sized, not cauldron-sized
         const bowl = new THREE.Mesh(
           new THREE.LatheGeometry(
             bowlProfile.map(([u, v]) => new THREE.Vector2(u * n, v * n)), 26),
