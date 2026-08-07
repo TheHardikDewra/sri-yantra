@@ -284,18 +284,25 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
         ts[i] = (ts[i][0], [min(r, outer[j] - MIN_WALL)
                             for j, r in enumerate(inner)])
 
-    # Terrace heights: a straight-sided pyramid reads best, so step by how far
-    # each outline has shrunk rather than in equal slices. The three bhupura
-    # lines are nearly the same size, so that rule alone would stack them at
-    # almost the same height and leave walls of no height between them; every
-    # tier therefore gets at least MIN_RISE, which also gives the plinth its
-    # three visible steps.
-    mean = [sum(rs) / len(rs) for _, rs in ts]
-    z = []
-    for m in mean:
-        want = base_h + height * (1 - m / mean[0])
-        z.append(want if not z else max(want, z[-1] + MIN_RISE))
-    z.append(z[-1] + bindu_h)
+    # Terrace heights follow the samatala meruprastara: the NINE avaranas
+    # rise in EQUAL steps. The navavarana literature recognises three
+    # elevation types for a meru - first three avaranas taller, middle three
+    # taller, or all equal - and only the last is specified exactly, so that
+    # is the one built. Tiers that are not avaranas of their own sit within
+    # their avarana's band: the bhupura's three lines split band one in
+    # thirds, the trivalaya drum carries the sixteen-petal ring partway
+    # through band two, and the circle E rims the chaturdasara at the base of
+    # band four. The bindu cone is the ninth avarana and gets a full step.
+    total = base_h + height + bindu_h          # summit height, kept as was
+    NINTH = total / 9
+    z = [k * NINTH for k in (
+        1 / 3, 2 / 3, 1,        # bhupura0..2        (avarana 1)
+        1.45, 2,                # trivritta, lotus16 (avarana 2)
+        3,                      # lotus8             (avarana 3)
+        3.45, 4,                # circle E, chaturdasara (avarana 4)
+        5, 6, 7, 8,             # bahir, antar, ashtakona, trikona (5-8)
+    )]
+    z.append(total)             # the bindu           (avarana 9)
 
     build_mesh.last_angles = angles
     build_mesh.last_tiers = ts

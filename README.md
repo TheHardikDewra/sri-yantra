@@ -178,6 +178,13 @@ plane as three parallel lines, and extruding only the outermost as a single
 plate throws that away — the gates flatten into plain tabs and the T-shaped
 portal stops reading.
 
+The elevations follow the **samatala meruprastāra**: the nine āvaraṇas rise in
+equal steps. The navāvaraṇa literature recognises three elevation types for a
+meru - the first three āvaraṇas taller, the middle three taller, or all equal -
+and only the last is specified exactly, so that is the one built. Tiers that
+are not āvaraṇas of their own (the trivalaya drum, the circle E) sit within
+their āvaraṇa's band, and the bindu cone takes the ninth full step.
+
 The 3D view is clamped above the horizon. An inverted Śrī Yantra is a different
 figure — the Śiva yantra of kāpālika practice — so the Meru is only ever shown
 the way up it is meant to stand. Straight down is fine and offered as a preset:
