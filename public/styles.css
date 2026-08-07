@@ -94,10 +94,11 @@ b { font-weight: 600; }
   display: flex; align-items: center; gap: 9px;
   font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none;
 }
+/* the downward triangle - Shakti's, and the figure's dominant read */
 .mark {
   width: 17px; height: 15px;
   background: var(--accent);
-  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 .topbar nav { display: flex; gap: 22px; }
 .topbar nav a {
@@ -223,6 +224,57 @@ select {
 .segmented button:last-child { border-right: none; }
 .segmented button.on { background: var(--ink); color: var(--paper); }
 
+/* A rail: the chosen option is carried by a solid pill that slides behind
+   the labels. Flat colour; the motion is the affordance. */
+.rail {
+  position: relative; display: flex; padding: 4px; gap: 2px;
+  border: 1px solid var(--rule); border-radius: 999px; background: var(--paper);
+  flex-wrap: wrap;
+}
+.rail .thumb {
+  position: absolute; background: var(--ink); border-radius: 999px;
+  transition: left .22s cubic-bezier(.5, 0, .2, 1),
+              width .22s cubic-bezier(.5, 0, .2, 1),
+              top .22s cubic-bezier(.5, 0, .2, 1),
+              height .22s cubic-bezier(.5, 0, .2, 1);
+}
+.rail button {
+  position: relative; z-index: 1; font: inherit; font-size: 13px;
+  padding: 7px 15px; border: none; border-radius: 999px;
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  display: inline-flex; align-items: center; transition: color .22s;
+}
+.rail button.on { color: var(--paper); }
+.rail button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .rail .thumb, .rail button { transition: none; }
+}
+
+/* the sixteen's transport: icon buttons and a per-act progress bar */
+.player { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.pbtn {
+  font: inherit; display: inline-flex; align-items: center;
+  justify-content: center; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--rule); background: var(--paper);
+  color: var(--ink-2); cursor: pointer;
+}
+.pbtn .i { margin: 0; width: 0.95em; height: 0.95em; }
+.pbtn:hover { color: var(--ink); border-color: var(--ink-2); }
+.pbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pbtn.main {
+  width: 42px; height: 42px;
+  background: var(--ink); border-color: var(--ink); color: var(--paper);
+}
+.pbtn.main:hover { background: var(--accent); border-color: var(--accent); }
+.pbar {
+  flex: 1 1 100%; height: 3px; border-radius: 2px; background: var(--rule);
+  overflow: hidden;
+}
+.pbar i {
+  display: block; height: 100%; background: var(--accent);
+  transform-origin: left; transform: scaleX(0);
+}
+
 /* ----------------------------------------------------------- data bits */
 
 .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 8px; }
@@ -290,8 +342,7 @@ tbody tr:nth-child(even) { background: rgba(128, 118, 96, .09); }
 .puja > * { flex: 0 0 auto; }
 .puja h3 { display: flex; align-items: center; margin: 0 0 8px; }
 .puja .fine { margin: 0 0 14px; }
-.puja .segmented { margin-bottom: 10px; }
-.puja .segmented button { flex: 1; padding: 7px 4px; font-size: 12.5px; }
+.puja .player { margin-bottom: 10px; }
 .puja .hint { margin: 0 0 12px; min-height: 2.4em; }
 
 .upacharas {

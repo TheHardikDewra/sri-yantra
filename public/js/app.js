@@ -15,6 +15,7 @@ try { if (localStorage.getItem('lang') === 'hi') lang = 'hi'; } catch (e) {}
 
 const T_EN = {
   notBegun: 'Not begun.', begin: 'Begin', resume: 'Resume', pause: 'Pause',
+  prevA: 'Previous upachara', nextA: 'Next upachara', endA: 'End',
   building: 'building the mountain…',
   couldNotLoad3D: 'could not load the 3D view: ',
   couldNotStart: 'could not start: ',
@@ -53,6 +54,34 @@ function applyStatic() {
 
 // parts of the page that scripts rebuild re-register here
 const langHooks = [];
+
+// ------------------------------------------------------------------- rails
+// The chosen option is carried by a pill that slides behind the labels.
+// Measured, not styled: label widths change with language and font load.
+
+function setRail(rail) {
+  const on = rail.querySelector('button.on');
+  const th = rail.querySelector('.thumb');
+  if (!on || !th) return;
+  th.style.left = on.offsetLeft + 'px';
+  th.style.top = on.offsetTop + 'px';
+  th.style.width = on.offsetWidth + 'px';
+  th.style.height = on.offsetHeight + 'px';
+}
+const rails = () => $$('.rail').forEach(setRail);
+$$('.rail').forEach(rail => rail.addEventListener('click', () =>
+  requestAnimationFrame(() => setRail(rail))));
+addEventListener('resize', rails);
+addEventListener('load', rails);
+langHooks.push(rails);
+
+// the transport's icon-only buttons carry their labels in aria
+function playerLabels() {
+  $('#puja-prev')?.setAttribute('aria-label', t('prevA'));
+  $('#puja-next')?.setAttribute('aria-label', t('nextA'));
+  $('#puja-stop')?.setAttribute('aria-label', t('endA'));
+}
+langHooks.push(playerLabels);
 
 $('#lang').addEventListener('click', () => {
   lang = lang === 'hi' ? 'en' : 'hi';
@@ -283,13 +312,19 @@ async function startPuja() {
   buildList();
 
   const caption = $('#puja-caption');
+  const bar = $('#puja-bar');
+  meru.onPujaProgress = p => {
+    bar.style.transform = `scaleX(${p})`;
+  };
   function sync() {
     const i = puja.step;
     [...list.children].forEach((li, k) => li.classList.toggle('on', k === i));
     caption.textContent = i < 0 ? t('notBegun')
       : t('caption')(i, UPACHARAS[i]);
-    $('#puja-play').textContent =
-      puja.playing ? t('pause') : (i < 0 ? t('begin') : t('resume'));
+    $('#puja-play-ico').setAttribute('href',
+      puja.playing ? '#i-pause' : '#i-play');
+    $('#puja-play').setAttribute('aria-label',
+      puja.playing ? t('pause') : (i < 0 ? t('begin') : t('resume')));
     if (i >= 0) list.children[i].scrollIntoView({ block: 'nearest' });
   }
   langHooks.push(() => { buildList(); sync(); });
@@ -349,6 +384,8 @@ whenNear($('#stage3d'), startMeru);
 // -------------------------------------------------------------------- boot
 
 applyStatic();
+rails();
+playerLabels();
 
 fetch('./data/sri-yantra.json')
   .then(r => r.json())
