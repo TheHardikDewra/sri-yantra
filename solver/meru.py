@@ -14,13 +14,18 @@ the summit.  From the base up:
 Every terrace outline is measured, not modelled.  Each enclosure of triangles
 is the set of points covered by at least d of the nine triangles, for
 d = 1, 3, 5, 7, 9, and its outline is found by shooting a ray out from the
-bindu and taking the last crossing at which the cover count is still d or more.
-That is exact - the crossings are intersections of the ray with the 27 drawn
-segments - and it needs no polygon arithmetic.
+centre of E and taking the last crossing at which the cover count is still d
+or more.  That is exact - the crossings are intersections of the ray with the
+27 drawn segments - and it needs no polygon arithmetic.
 
-All ten outlines turn out to be star-shaped about the bindu, so each is stored
-as a radius r(theta).  The solid is then a staircase profile swept round the
-axis, which meshes into clean quad strips and closes watertight.
+The seven mountain outlines (trivritta up to trikona) are star-shaped about
+the centre, so each is stored as a radius r(theta) and swept round the axis
+into clean quad strips.  The gated square is NOT star-shaped - a radial sweep
+fills the T-portals' re-entrant corners and melts the gates into tabs - so
+the three bhupura lines are built as what they are: exact polygon prisms,
+with ear-clipped caps and parallel-offset terrace bands.  The plinth and the
+mountain are two watertight shells, the mountain's base embedded a little
+into the plinth's top so the pair unions cleanly when sliced or printed.
 """
 
 import math
@@ -28,7 +33,8 @@ import struct
 
 from sri_yantra import solve, HUET
 from arrangement import segments, _inside
-from build import LAYOUT, _polar, bhupura_points
+from build import (LAYOUT, _polar, bhupura_points,
+                   LOW_R, LOW_A, HIGH_R, HIGH_A)
 
 
 # How far either side of a corner bearing an extra ray is fired, and the
@@ -38,6 +44,7 @@ CORNER_NUDGE = 2e-4
 MIN_GAP = 2e-5
 MIN_WALL = 2e-4
 MIN_RISE = 0.055      # shortest wall the eye should still read as a step
+EMBED = 0.02          # how deep the mountain's base sits inside the plinth
 
 
 def _tri_depth(tris, p):
@@ -79,33 +86,61 @@ def ray_outline(tris, origin, angles, d):
     return out
 
 
-def _petal_r(n, r0, r1, th, belly=0.55, spread=1.0):
-    """Radius of the petal ring at angle th - same curve the SVG draws."""
+_PETAL_TABLES = {}
+
+
+def _petal_table(n, r0, r1, samples=8192, bins=2048):
+    """Silhouette radius of the petal ring over one fundamental domain.
+
+    The ring is drawn as cubic beziers (petal_ring in build.py).  Sampling the
+    actual drawn curve and keeping, per angle bin, the largest radius gives the
+    silhouette exactly - including where LOW_A > 1 makes neighbouring petals
+    cross near the cusps.  The figure repeats every 2*pi/n and mirrors about
+    each petal centre, so one table over [cusp, centre] covers everything.
+    """
+    key = (n, round(r0, 12), round(r1, 12))
+    if key not in _PETAL_TABLES:
+        half = math.pi / n
+        span = r1 - r0
+        p = _polar(r0, -half)
+        a = _polar(r0 + LOW_R * span, -half * LOW_A)
+        b = _polar(r0 + HIGH_R * span, -half * HIGH_A)
+        q = _polar(r1, 0.0)
+        tbl = [0.0] * (bins + 1)
+        for s in range(samples + 1):
+            m = s / samples
+            w = 1 - m
+            x = w**3 * p[0] + 3 * w * w * m * a[0] + 3 * w * m * m * b[0] + m**3 * q[0]
+            y = w**3 * p[1] + 3 * w * w * m * a[1] + 3 * w * m * m * b[1] + m**3 * q[1]
+            # fold the sample's bearing into [-half, 0]: distance past the
+            # nearest cusp, mirrored about the petal centre
+            t = (math.atan2(y, x) + half) % (2 * half)
+            u = min(t, 2 * half - t) - half
+            j = min(bins, max(0, round((u + half) / half * bins)))
+            r = math.hypot(x, y)
+            if r > tbl[j]:
+                tbl[j] = r
+        for j in range(bins + 1):          # fill any bin the sampling skipped
+            if tbl[j] == 0.0:
+                lo = next(tbl[i] for i in range(j - 1, -1, -1) if tbl[i] > 0.0)
+                hi = next((tbl[i] for i in range(j + 1, bins + 1)
+                           if tbl[i] > 0.0), lo)
+                tbl[j] = (lo + hi) / 2
+        _PETAL_TABLES[key] = tbl
+    return _PETAL_TABLES[key]
+
+
+def _petal_r(n, r0, r1, th):
+    """Radius of the petal ring at angle th - the curve the SVG draws."""
     half = math.pi / n
-    k = round(th / (2 * half))
-    am = 2 * half * k
-    u = th - am
-    # solve the quadratic Bezier for the parameter whose angle matches
-    side = 1 if u >= 0 else -1
-    p = _polar(r0, am + side * half)
-    c = _polar(r0 + belly * (r1 - r0), am + side * half * spread)
-    q = _polar(r1, am)
-    # the curve runs from angle am + side*half at m = 0 to am at m = 1, so the
-    # offset from am shrinks monotonically; bisect on its magnitude
-    lo, hi = 0.0, 1.0
-    for _ in range(60):
-        m = (lo + hi) / 2
-        x = (1 - m) ** 2 * p[0] + 2 * (1 - m) * m * c[0] + m * m * q[0]
-        y = (1 - m) ** 2 * p[1] + 2 * (1 - m) * m * c[1] + m * m * q[1]
-        a = (math.atan2(y, x) - am + math.pi) % (2 * math.pi) - math.pi
-        if abs(a) > abs(u):
-            lo = m
-        else:
-            hi = m
-    m = (lo + hi) / 2
-    x = (1 - m) ** 2 * p[0] + 2 * (1 - m) * m * c[0] + m * m * q[0]
-    y = (1 - m) ** 2 * p[1] + 2 * (1 - m) * m * c[1] + m * m * q[1]
-    return math.hypot(x, y)
+    bins = 2048
+    tbl = _petal_table(n, r0, r1, bins=bins)
+    t = (th + half) % (2 * half)
+    u = min(t, 2 * half - t) - half
+    f = (u + half) / half * bins
+    j = min(bins - 1, max(0, int(f)))
+    k = f - j
+    return tbl[j] * (1 - k) + tbl[j + 1] * k
 
 
 def _outline_r(pts, th):
@@ -147,14 +182,71 @@ def tiers(tris, bindu, angles, L=LAYOUT):
     return out
 
 
+# --------------------------------------------------------------------------
+# exact polygon prisms for the bhupura
+# --------------------------------------------------------------------------
+
+def _clean_ring(pts):
+    """Drop consecutive duplicates and the closing repeat; force CCW."""
+    out = []
+    for p in pts:
+        if not out or math.dist(p, out[-1]) > 1e-9:
+            out.append(tuple(p))
+    if len(out) > 1 and math.dist(out[0], out[-1]) <= 1e-9:
+        out.pop()
+    area2 = sum(a[0] * b[1] - b[0] * a[1]
+                for a, b in zip(out, out[1:] + out[:1]))
+    return out if area2 > 0 else out[::-1]
+
+
+def _ear_clip(pts):
+    """Triangulate a simple CCW polygon; returns index triples, CCW wound.
+
+    O(n^3) worst case, which is nothing at the forty-odd vertices the gated
+    square has.  Interior edges come out shared by exactly two triangles in
+    opposite directions, which is what the watertight check needs.
+    """
+    def cross(o, a, b):
+        return ((a[0] - o[0]) * (b[1] - o[1])
+                - (a[1] - o[1]) * (b[0] - o[0]))
+
+    def inside(p, a, b, c):
+        e = -1e-12
+        return (cross(a, b, p) > e and cross(b, c, p) > e
+                and cross(c, a, p) > e)
+
+    idx = list(range(len(pts)))
+    out = []
+    while len(idx) > 3:
+        for k in range(len(idx)):
+            i0 = idx[k - 1]
+            i1 = idx[k]
+            i2 = idx[(k + 1) % len(idx)]
+            a, b, c = pts[i0], pts[i1], pts[i2]
+            if cross(a, b, c) <= 1e-12:
+                continue                     # reflex corner, not an ear
+            if any(inside(pts[j], a, b, c)
+                   for j in idx if j not in (i0, i1, i2)):
+                continue                     # another vertex sits inside
+            out.append((i0, i1, i2))
+            del idx[k]
+            break
+        else:
+            raise ValueError("ear clipping found no ear; polygon not simple?")
+    out.append(tuple(idx))
+    return out
+
+
 def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
                bindu_h=0.10):
     """Vertices, triangle indices, and per-tier heights for the Meru.
 
-    Every outline is swept about the origin - the centre of the circle E,
-    which the lotuses and the bhupura are concentric with, and which sits
-    inside the central triangle, so all ten outlines are star-shaped about it.
-    The summit alone is placed at the bindu, a little above that centre.
+    The mountain outlines are swept about the origin - the centre of the
+    circle E, which the lotuses are concentric with, and which sits inside
+    the central triangle, so all seven are star-shaped about it.  The gated
+    square is not star-shaped, so the three bhupura lines are built as exact
+    polygon prisms instead.  The summit alone is placed at the bindu, a
+    little above that centre.
     """
     base = [2 * math.pi * k / n_ang for k in range(n_ang)]
     # add the exact bearing of every corner of the figure, twice over, so the
@@ -207,6 +299,7 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
 
     build_mesh.last_angles = angles
     build_mesh.last_tiers = ts
+    build_mesh.last_z = z
 
     V, F = [], []
     m = len(angles)
@@ -214,6 +307,50 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
     def vid(x, y, zz):
         V.append((x, y, zz))
         return len(V) - 1
+
+    # ---- the plinth: three exact prisms, one per bhupura line -------------
+    # The gated square is not star-shaped about the centre, so it cannot be
+    # swept without melting the T-portals.  Each line is extruded as the
+    # polygon it is.  The three outlines are parallel offsets of one another,
+    # so their vertices correspond one to one and each tread between two of
+    # them is a clean band of quads.
+    NB = len(LAYOUT["bhupura"])
+    rings2d = [_clean_ring(bhupura_points(k)) for k in range(NB)]
+    assert len({len(r) for r in rings2d}) == 1, "bhupura outlines must match"
+    build_mesh.last_bhupura = rings2d
+    nb = len(rings2d[0])
+
+    def wall(lo, hi):
+        for j in range(nb):
+            k = (j + 1) % nb
+            F.append((lo[j], lo[k], hi[k]))
+            F.append((lo[j], hi[k], hi[j]))
+
+    def band(outer, inner):
+        for j in range(nb):
+            k = (j + 1) % nb
+            F.append((outer[j], outer[k], inner[k]))
+            F.append((outer[j], inner[k], inner[j]))
+
+    floor_ring = [vid(x, y, 0.0) for x, y in rings2d[0]]
+    for a, b, c in _ear_clip(rings2d[0]):            # underside, facing down
+        F.append((floor_ring[a], floor_ring[c], floor_ring[b]))
+    prev = floor_ring
+    for k in range(NB):
+        top = [vid(x, y, z[k]) for x, y in rings2d[k]]
+        wall(prev, top)                              # riser of line k
+        if k < NB - 1:
+            inner = [vid(x, y, z[k]) for x, y in rings2d[k + 1]]
+            band(top, inner)                         # tread at z[k]
+            prev = inner
+        else:
+            for a, b, c in _ear_clip(rings2d[k]):    # cap, facing up
+                F.append((top[a], top[b], top[c]))
+
+    # ---- the mountain: the star-shaped outlines, swept --------------------
+    # Its base cap sits EMBED below the plinth's cap, inside the solid, so
+    # the two shells overlap and union cleanly in any slicer or boolean.
+    zB = z[NB - 1] - EMBED
 
     # ring of vertices for outline i at height zz
     def ring(rs, zz):
@@ -234,12 +371,13 @@ def build_mesh(tris, bindu, n_ang=1440, height=2.15, base_h=0.20,
             F.append((a[j], b[k], b[j]))
             F.append((a[j], a[k], b[k]))
 
-    centre_bottom = vid(0.0, 0.0, 0.0)
+    centre_bottom = vid(0.0, 0.0, zB)
     prev_top = None
-    for i, (_, rs) in enumerate(ts):
-        low = ring(rs, z[i - 1] if i else 0.0)
+    for i in range(NB, len(ts)):
+        rs = ts[i][1]
+        low = ring(rs, z[i - 1] if i > NB else zB)
         high = ring(rs, z[i])
-        if i == 0:
+        if i == NB:
             for j in range(m):                       # underside
                 F.append((centre_bottom, low[(j + 1) % m], low[j]))
         else:
@@ -392,6 +530,23 @@ def check_stl(path):
         vol += (p[0][0] * (p[1][1] * p[2][2] - p[2][1] * p[1][2])
                 - p[0][1] * (p[1][0] * p[2][2] - p[2][0] * p[1][2])
                 + p[0][2] * (p[1][0] * p[2][1] - p[2][0] * p[1][1])) / 6.0
+    # the plinth and the mountain are separate closed shells; Euler's formula
+    # holds per connected component, so count the components first
+    parent = list(range(len(verts)))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a, b, c in faces:
+        for u, v2 in ((a, b), (b, c)):
+            ra, rb = find(u), find(v2)
+            if ra != rb:
+                parent[ra] = rb
+    shells = len({find(v2) for v2 in range(len(verts))})
+
     V, E, F = len(verts), len(und), len(faces)
     return {
         "file size consistent": len(d) == 84 + n * 50,
@@ -403,7 +558,8 @@ def check_stl(path):
             all(v == 1 for v in dirc.values()),
         "every directed edge has an opposite":
             all((b, a) in dirc for a, b in dirc),
-        "Euler V-E+F == 2": V - E + F == 2,
+        f"Euler V-E+F == 2 per shell ({shells} shells)":
+            V - E + F == 2 * shells,
         "volume positive, so normals face out": vol > 0,
     }
 
@@ -450,13 +606,22 @@ if __name__ == "__main__":
     src_a = build_mesh.last_angles
     step = max(1, len(src_a) // 720)
     keep = list(range(0, len(src_a), step))
+    NB = len(build_mesh.last_bhupura)
     profile = {
-        "note": ("height of the solid at (r, theta): the top of the innermost "
-                 "tier whose radius still reaches r; 0 outside the base"),
+        "format": 2,
+        "note": ("mountain tiers as r(theta) at the angles listed - they are "
+                 "NOT uniformly spaced, search them; the bhupura as its three "
+                 "outline polygons with their top heights. Plan coordinates "
+                 "(x, y); the GLB maps a plan point to world (x, -y) in xz"),
         "angles": [round(src_a[i], 5) for i in keep],
         "tiers": [{"name": nm, "z": round(zz, 5),
                    "r": [round(rs[i], 5) for i in keep]}
-                  for (nm, rs), zz in zip(build_mesh.last_tiers, z)],
+                  for (nm, rs), zz in zip(build_mesh.last_tiers[NB:], z[NB:])],
+        "bhupura": {
+            "z": [round(zz, 5) for zz in z[:NB]],
+            "outlines": [[[round(x, 5), round(y, 5)] for x, y in ring]
+                         for ring in build_mesh.last_bhupura],
+        },
     }
     with open(os.path.join(OUT, "meru-profile.json"), "w") as fh:
         json.dump(profile, fh, separators=(",", ":"))

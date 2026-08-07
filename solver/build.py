@@ -248,13 +248,13 @@ def bhupura(k=0, L=LAYOUT):
 def to_svg(data, size=1000, ink="#1a1a1a", paper="#faf7f2", fill="#c9553d"):
     L = data["layout"]
     span = L["gate"]["reach"] + 0.04
-    k = size / (2 * span)
+    sc = size / (2 * span)
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" '
         f'height="{size}" viewBox="0 0 {size} {size}">',
         f'<rect width="{size}" height="{size}" fill="{paper}"/>',
-        f'<g transform="translate({size/2},{size/2}) scale({k})" '
-        f'fill="none" stroke="{ink}" stroke-width="{2.0/k:.6f}" '
+        f'<g transform="translate({size/2},{size/2}) scale({sc})" '
+        f'fill="none" stroke="{ink}" stroke-width="{2.0/sc:.6f}" '
         f'stroke-linejoin="round">',
     ]
     for k in range(len(L["bhupura"])):
